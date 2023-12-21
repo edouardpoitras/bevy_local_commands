@@ -1,0 +1,12 @@
+[package]
+name = "bevy_local_commands"
+version = "0.1.0"
+edition = "2021"
+description = "Simple local shell commands for the Bevy game engine"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/edouardpoitras/bevy_local_commands"
+
+[dependencies]
+bevy = "0.11"
+duct = "0.13"
+futures-lite = "1.13"
