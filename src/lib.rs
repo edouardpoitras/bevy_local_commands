@@ -91,6 +91,7 @@ fn get_shell_command_string(run_shell_command: &RunShellCommand) -> String {
 fn handle_new_shell_commands(
     mut run_shell_command_event: EventReader<RunShellCommand>,
     mut shell_command_started_event: EventWriter<ShellCommandStarted>,
+    mut shell_command_completed_event: EventWriter<ShellCommandCompleted>,
     mut active_shell_commands: ResMut<ActiveShellCommands>,
 ) {
     for run_shell_command in run_shell_command_event.iter() {
@@ -98,6 +99,11 @@ fn handle_new_shell_commands(
         let expression = cmd(&run_shell_command.program, &run_shell_command.arguments);
         let active_shell_command = spawn_shell_command(command_string.clone(), expression);
         if active_shell_command.is_none() {
+            shell_command_completed_event.send(ShellCommandCompleted {
+                pid: 0,
+                command: command_string.clone(),
+                success: false,
+            });
             continue;
         }
         let active_shell_command = active_shell_command.unwrap();
@@ -265,7 +271,7 @@ fn spawn_shell_command(command_string: String, expression: Expression) -> Option
             error!("Failed to get PID of shell command: {}", &command_string);
         }
     } else {
-        error!("Failed to spawn shell command: {}", &command_string);
+        warn!("Failed to spawn shell command: {}", &command_string);
     }
     None
 }
