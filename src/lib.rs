@@ -49,11 +49,12 @@ pub struct ShellCommandCompleted {
     pub success: bool,
     pub pid: u32,
     pub command: String,
+    pub output_buffer: Vec<String>,
 }
 
 struct ActiveShellCommand {
     command: String,
-    task: Option<Task<bool>>,
+    task: Option<Task<(bool, Vec<String>)>>,
     pid: u32,
     output_lines: Option<Vec<String>>,
     kill_requested: bool,
@@ -107,6 +108,7 @@ fn handle_new_shell_commands(
                 pid: 0,
                 command: command_string.clone(),
                 success: false,
+                output_buffer: vec![],
             });
             continue;
         }
@@ -171,6 +173,7 @@ fn handle_kill_shell_command(
 fn handle_completed_shell_commands(
     mut active_shell_commands: ResMut<ActiveShellCommands>,
     mut shell_command_completed_event: EventWriter<ShellCommandCompleted>,
+    mut shell_command_output_events: EventWriter<ShellCommandOutput>,
 ) {
     for active_shell_command in active_shell_commands.0.iter_mut() {
         if let Ok(mut asc) = active_shell_command.lock() {
@@ -180,15 +183,21 @@ fn handle_completed_shell_commands(
                 }
                 None
             });
-            if let Some(result) = result {
+            if let Some((result, last_lines)) = result {
                 info!(
                     "Command Completed (PID - {}, Success - {}): {}",
                     asc.pid, result, asc.command
                 );
+                shell_command_output_events.send(ShellCommandOutput {
+                    pid: asc.pid,
+                    command: asc.command.clone(),
+                    output: last_lines.clone(),
+                });
                 shell_command_completed_event.send(ShellCommandCompleted {
                     success: result,
                     pid: asc.pid,
                     command: asc.command.clone(),
+                    output_buffer: last_lines,
                 });
             }
         }
@@ -277,7 +286,8 @@ fn spawn_shell_command(
                     }
                     break;
                 }
-                result
+
+                (result, output_lines)
             });
             if let Ok(mut asc) = active_shell_command.lock() {
                 asc.task = Some(task);
