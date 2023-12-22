@@ -18,7 +18,10 @@ pub struct RunShellCommand {
 
 impl RunShellCommand {
     pub fn new<S: Into<String>>(program: S, arguments: Vec<S>) -> RunShellCommand {
-        RunShellCommand { program: program.into(), arguments: arguments.into_iter().map(|s| s.into()).collect() }
+        RunShellCommand {
+            program: program.into(),
+            arguments: arguments.into_iter().map(|s| s.into()).collect(),
+        }
     }
 }
 
@@ -31,6 +34,7 @@ pub struct ShellCommandStarted {
 #[derive(Debug, Event)]
 pub struct ShellCommandOutput {
     pub pid: u32,
+    pub command: String,
     pub output: Vec<String>,
 }
 
@@ -126,7 +130,11 @@ fn handle_shell_command_output(
             if asc.output_lines.is_some() {
                 let pid = asc.pid;
                 let lines = asc.output_lines.take();
-                shell_command_output.send(ShellCommandOutput { pid, output: lines.unwrap() });
+                shell_command_output.send(ShellCommandOutput {
+                    pid,
+                    command: asc.command.clone(),
+                    output: lines.unwrap(),
+                });
             }
         }
     }
@@ -144,7 +152,10 @@ fn handle_kill_shell_command(
             if asc.is_ok() {
                 let mut asc = asc.unwrap();
                 if asc.pid == pid {
-                    info!("Killing shell command (PID: {}, Command: {})", pid, &asc.command);
+                    info!(
+                        "Killing shell command (PID: {}, Command: {})",
+                        pid, &asc.command
+                    );
                     asc.kill_requested = true;
                     found = true;
                     break;
@@ -194,7 +205,10 @@ fn handle_completed_shell_commands(
     });
 }
 
-fn spawn_shell_command(command_string: String, expression: Expression) -> Option<Arc<Mutex<ActiveShellCommand>>> {
+fn spawn_shell_command(
+    command_string: String,
+    expression: Expression,
+) -> Option<Arc<Mutex<ActiveShellCommand>>> {
     let cs = command_string.clone();
     let mut result = false;
     let reader = expression.stderr_to_stdout().reader();
@@ -235,7 +249,7 @@ fn spawn_shell_command(command_string: String, expression: Expression) -> Option
                                     output_lines.clear();
                                     // Check for kill command.
                                     if asc.kill_requested {
-                                        if let Ok(_) = reader_handle.kill() {
+                                        if reader_handle.kill().is_ok() {
                                             break;
                                         } else {
                                             error!("Failed to kill process PID {}", pid)
@@ -251,7 +265,11 @@ fn spawn_shell_command(command_string: String, expression: Expression) -> Option
                             }
                             continue;
                         } else {
-                            error!("Command Exit Error (PID {}): {:?}", pid, result_line.as_ref().err());
+                            error!(
+                                "Command Exit Error (PID {}): {:?}",
+                                pid,
+                                result_line.as_ref().err()
+                            );
                         }
                     } else {
                         info!("Command (PID {}) Completed: {}", pid, &command_string);
