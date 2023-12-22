@@ -8,5 +8,4 @@ repository = "https://github.com/edouardpoitras/bevy_local_commands"
 
 [dependencies]
 bevy = "0.11"
-duct = "0.13"
 futures-lite = "1.13"
