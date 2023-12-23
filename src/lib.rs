@@ -52,7 +52,6 @@ pub struct ShellCommandCompleted {
     pub success: bool,
     pub pid: u32,
     pub command: String,
-    pub output_buffer: Vec<String>,
 }
 
 /// The lines written to the standard output by a given process.
@@ -149,19 +148,33 @@ fn handle_kill_process(
         } else {
             warn!("Could not find and kill shell command (PID: {})", pid);
         }
-
-        // The process is killed, we can remove it
-        active_process_map.0.remove(&pid);
     }
 }
 
 fn handle_completed_shell_commands(
-    mut active_shell_commands: ResMut<ActiveProcessMap>,
+    mut active_process_map: ResMut<ActiveProcessMap>,
     mut shell_command_completed_event: EventWriter<ShellCommandCompleted>,
-    mut shell_command_output_events: EventWriter<ShellCommandOutput>,
 ) {
-    // FIXME: Figure out how to detect/handle process completion
-    todo!();
+    // Remember which processes completed so we can remove them from the map
+    let mut completed_processes = Vec::new();
+
+    for (&pid, active_process) in active_process_map.0.iter_mut() {
+        if active_process.task.is_finished() {
+            let exit_status = active_process.process.wait().unwrap();
+            shell_command_completed_event.send(ShellCommandCompleted {
+                command: format!("{:?}", active_process.command),
+                pid,
+                success: exit_status.success(),
+            });
+
+            completed_processes.push(pid);
+        }
+    }
+
+    // Clean up process map
+    for pid in completed_processes {
+        active_process_map.0.remove(&pid);
+    }
 }
 
 fn spawn_process(mut command: Command) -> ActiveProcess {
