@@ -63,9 +63,9 @@ struct ActiveShellCommand {
 #[derive(Default, Resource)]
 struct ActiveShellCommands(Vec<Arc<Mutex<ActiveShellCommand>>>);
 
-pub struct AdversityLocalCommandsPlugin;
+pub struct BevyLocalCommandsPlugin;
 
-impl Plugin for AdversityLocalCommandsPlugin {
+impl Plugin for BevyLocalCommandsPlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<RunShellCommand>()
             .add_event::<ShellCommandStarted>()

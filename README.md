@@ -14,7 +14,7 @@ Bevy plugin that exposes events that can be used to execute simple shell command
 
 ```rust
 // ...
-.add_plugins(AdversityLocalCommandsPlugin)
+.add_plugins(BevyLocalCommandsPlugin)
 // ...
 ```
 
