@@ -65,11 +65,11 @@ fn get_completed(mut shell_command_completed: EventReader<ShellCommandCompleted>
 
 - [ ] Better way to kill commands that are still running
 - [ ] Windows/Mac testing (not sure if it works yet)
-- [ ] Bevy 0.12 support
 
 
 ## Bevy Compatilibity
 
 |bevy|bevy_local_commands|
 |---|---|
+|0.12|0.2|
 |0.11|0.1|

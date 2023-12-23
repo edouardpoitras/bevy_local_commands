@@ -99,7 +99,7 @@ fn handle_new_shell_commands(
     mut shell_command_completed_event: EventWriter<ShellCommandCompleted>,
     mut active_shell_commands: ResMut<ActiveShellCommands>,
 ) {
-    for run_shell_command in run_shell_command_event.iter() {
+    for run_shell_command in run_shell_command_event.read() {
         let command_string = get_shell_command_string(run_shell_command);
         let expression = cmd(&run_shell_command.program, &run_shell_command.arguments);
         let active_shell_command = spawn_shell_command(command_string.clone(), expression);
@@ -146,7 +146,7 @@ fn handle_kill_shell_command(
     mut active_shell_commands: ResMut<ActiveShellCommands>,
     mut kill_shell_commands: EventReader<KillShellCommand>,
 ) {
-    for kill_shell_command in kill_shell_commands.iter() {
+    for kill_shell_command in kill_shell_commands.read() {
         let pid = kill_shell_command.0;
         let mut found = false;
         for active_shell_command in active_shell_commands.0.iter_mut() {
