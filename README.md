@@ -48,7 +48,7 @@ Note: Current limitation - kill will only trigger when the command generates out
 
 ```rust
 fn get_command_output(mut shell_command_output: EventReader<ShellCommandOutput>) {
-    for command_output in output.iter() {
+    for command_output in shell_command_output.iter() {
         info!("Command PID: {}", command_output.pid);
         for line in  command_output.output.iter() {
             info!("Line Output: {}", line);
