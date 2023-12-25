@@ -86,7 +86,8 @@ impl Plugin for BevyLocalCommandsPlugin {
                     handle_shell_command_output,
                     handle_kill_process,
                     handle_completed_shell_commands,
-                ),
+                )
+                    .chain(),
             );
     }
 }
@@ -120,8 +121,9 @@ fn handle_shell_command_output(
 ) {
     for (&pid, active_process) in active_process_map.0.iter_mut() {
         if let Ok(mut output_buffer) = active_process.output_buffer.0.lock() {
-            // Empty the output buffer and send it as event
-            let output: Vec<_> = output_buffer.drain(..).collect();
+            // Send the buffered output in the event while clearing the output buffer
+            let mut output = Vec::<String>::new();
+            std::mem::swap(&mut *output_buffer, &mut output);
 
             if !output.is_empty() {
                 shell_command_output.send(ShellCommandOutput {
