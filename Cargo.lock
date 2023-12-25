@@ -693,7 +693,6 @@ name = "bevy_local_commands"
 version = "0.2.1"
 dependencies = [
  "bevy",
- "futures-lite 1.13.0",
 ]
 
 [[package]]
