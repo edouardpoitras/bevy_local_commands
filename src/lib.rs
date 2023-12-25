@@ -59,7 +59,7 @@ pub struct ShellCommandCompleted {
 struct ProcessOutputBuffer(Arc<Mutex<Vec<String>>>);
 
 #[derive(Debug)]
-struct ActiveProcess {
+pub struct ActiveProcess {
     command: Command,
     process: Child,
     task: Task<()>,
@@ -67,7 +67,7 @@ struct ActiveProcess {
 }
 
 #[derive(Default, Resource)]
-struct ActiveProcessMap(HashMap<Pid, ActiveProcess>);
+pub struct ActiveProcessMap(pub HashMap<Pid, ActiveProcess>);
 
 pub struct BevyLocalCommandsPlugin;
 
@@ -83,8 +83,8 @@ impl Plugin for BevyLocalCommandsPlugin {
                 Update,
                 (
                     handle_new_process,
-                    handle_shell_command_output,
                     handle_kill_process,
+                    handle_shell_command_output,
                     handle_completed_shell_commands,
                 )
                     .chain(),
