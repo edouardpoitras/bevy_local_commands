@@ -69,9 +69,9 @@ struct ActiveProcess {
 #[derive(Default, Resource)]
 struct ActiveProcessMap(HashMap<Pid, ActiveProcess>);
 
-pub struct AdversityLocalCommandsPlugin;
+pub struct BevyLocalCommandsPlugin;
 
-impl Plugin for AdversityLocalCommandsPlugin {
+impl Plugin for BevyLocalCommandsPlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<RunShellCommand>()
             .add_event::<ShellCommandStarted>()
@@ -96,7 +96,7 @@ fn handle_new_process(
     mut shell_command_started_event: EventWriter<ShellCommandStarted>,
     mut active_process_map: ResMut<ActiveProcessMap>,
 ) {
-    for run_shell_command in run_shell_command_event.iter() {
+    for run_shell_command in run_shell_command_event.read() {
         // Assemble the command
         let mut cmd = Command::new(run_shell_command.program.clone());
         cmd.args(run_shell_command.arguments.clone())
@@ -138,7 +138,7 @@ fn handle_kill_process(
     mut active_process_map: ResMut<ActiveProcessMap>,
     mut kill_shell_commands: EventReader<KillShellCommand>,
 ) {
-    for kill_shell_command in kill_shell_commands.iter() {
+    for kill_shell_command in kill_shell_commands.read() {
         let pid = kill_shell_command.0;
 
         if let Some(active_process) = active_process_map.0.get_mut(&pid) {

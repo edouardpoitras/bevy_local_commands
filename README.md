@@ -1,4 +1,10 @@
-# Adversity Local Commands
+# Bevy Local Commands
+
+[![Bevy Local Commands](https://github.com/edouardpoitras/bevy_local_commands/actions/workflows/rust.yml/badge.svg?branch=main)](https://github.com/edouardpoitras/bevy_local_commands/actions/workflows/rust.yml)
+[![Latest version](https://img.shields.io/crates/v/bevy_local_commands.svg)](https://crates.io/crates/bevy_local_commands)
+[![Documentation](https://docs.rs/bevy_local_commands/badge.svg)](https://docs.rs/bevy_local_commands)
+![MIT](https://img.shields.io/badge/license-MIT-blue.svg)
+![Apache](https://img.shields.io/badge/license-Apache-blue.svg)
 
 Bevy plugin that exposes events that can be used to execute simple shell commands.
 
@@ -8,7 +14,7 @@ Bevy plugin that exposes events that can be used to execute simple shell command
 
 ```rust
 // ...
-.add_plugins(AdversityLocalCommandsPlugin)
+.add_plugins(BevyLocalCommandsPlugin)
 // ...
 ```
 
@@ -42,7 +48,7 @@ Note: Current limitation - kill will only trigger when the command generates out
 
 ```rust
 fn get_command_output(mut shell_command_output: EventReader<ShellCommandOutput>) {
-    for command_output in output.iter() {
+    for command_output in shell_command_output.iter() {
         info!("Command PID: {}", command_output.pid);
         for line in  command_output.output.iter() {
             info!("Line Output: {}", line);
@@ -65,11 +71,11 @@ fn get_completed(mut shell_command_completed: EventReader<ShellCommandCompleted>
 
 - [ ] Better way to kill commands that are still running
 - [ ] Windows/Mac testing (not sure if it works yet)
-- [ ] Bevy 0.12 support
 
 
 ## Bevy Compatilibity
 
 |bevy|bevy_local_commands|
 |---|---|
+|0.12|0.2|
 |0.11|0.1|
