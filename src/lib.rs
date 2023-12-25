@@ -189,7 +189,7 @@ fn spawn_process(mut command: Command) -> ActiveProcess {
 
     let output_buffer = ProcessOutputBuffer::default();
 
-    let output_buffer_moved = output_buffer.clone();
+    let moved_buffer = output_buffer.clone();
     let thread_pool = IoTaskPool::get();
 
     // Read stdout and write it to the output buffer
@@ -203,8 +203,10 @@ fn spawn_process(mut command: Command) -> ActiveProcess {
                 break;
             }
 
-            if let Ok(mut output_buffer) = output_buffer_moved.0.lock() {
-                output_buffer.push(line.clone());
+            if let Ok(mut buffer) = moved_buffer.0.lock() {
+                // The line includes the terminating new line, but we already have all lines separated
+                buffer.push(line.trim_end_matches('\n').to_string());
+                line.clear();
             }
         }
     });
