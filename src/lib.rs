@@ -90,8 +90,8 @@ impl Plugin for BevyLocalCommandsPlugin {
                 (
                     handle_new_process,
                     handle_kill_process,
-                    handle_shell_command_output,
-                    handle_completed_shell_commands,
+                    handle_process_output,
+                    handle_completed_process,
                 )
                     .chain(),
             );
@@ -126,9 +126,9 @@ fn handle_new_process(
     }
 }
 
-fn handle_shell_command_output(
+fn handle_process_output(
     mut active_process_map: ResMut<ActiveProcessMap>,
-    mut shell_command_output: EventWriter<ProcessOutputEvent>,
+    mut process_output_event: EventWriter<ProcessOutputEvent>,
 ) {
     for (&pid, active_process) in active_process_map.0.iter_mut() {
         if let Ok(mut output_buffer) = active_process.output_buffer.0.lock() {
@@ -137,7 +137,7 @@ fn handle_shell_command_output(
             std::mem::swap(&mut *output_buffer, &mut output);
 
             if !output.is_empty() {
-                shell_command_output.send(ProcessOutputEvent {
+                process_output_event.send(ProcessOutputEvent {
                     pid,
                     command: format!("{:?}", active_process.command),
                     output,
@@ -149,9 +149,9 @@ fn handle_shell_command_output(
 
 fn handle_kill_process(
     mut active_process_map: ResMut<ActiveProcessMap>,
-    mut kill_shell_commands: EventReader<KillProcess>,
+    mut kill_process_event: EventReader<KillProcess>,
 ) {
-    for kill_shell_command in kill_shell_commands.read() {
+    for kill_shell_command in kill_process_event.read() {
         let pid = kill_shell_command.0;
 
         if let Some(active_process) = active_process_map.0.get_mut(&pid) {
@@ -164,9 +164,9 @@ fn handle_kill_process(
     }
 }
 
-fn handle_completed_shell_commands(
+fn handle_completed_process(
     mut active_process_map: ResMut<ActiveProcessMap>,
-    mut shell_command_completed_event: EventWriter<ProcessCompleted>,
+    mut process_completed_event: EventWriter<ProcessCompleted>,
 ) {
     // Remember which processes completed so we can remove them from the map
     let mut completed_processes = Vec::new();
@@ -174,7 +174,7 @@ fn handle_completed_shell_commands(
     for (&pid, active_process) in active_process_map.0.iter_mut() {
         if active_process.task.is_finished() {
             let exit_status = active_process.process.wait().unwrap();
-            shell_command_completed_event.send(ProcessCompleted {
+            process_completed_event.send(ProcessCompleted {
                 command: format!("{:?}", active_process.command),
                 pid,
                 success: exit_status.success(),

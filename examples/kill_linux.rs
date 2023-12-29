@@ -23,24 +23,24 @@ fn startup(mut shell_commands: EventWriter<RunProcess>) {
     ));
 }
 
-fn kill(active_processes: Res<ActiveProcessMap>, mut kill_shell_command: EventWriter<KillProcess>) {
+fn kill(active_processes: Res<ActiveProcessMap>, mut kill_process_event: EventWriter<KillProcess>) {
     for &pid in active_processes.0.keys() {
         info!("Killing {pid}");
-        kill_shell_command.send(KillProcess(pid));
+        kill_process_event.send(KillProcess(pid));
     }
 }
 
 fn update(
-    mut shell_command_output: EventReader<ProcessOutputEvent>,
-    mut shell_command_completed: EventReader<ProcessCompleted>,
+    mut process_output_event: EventReader<ProcessOutputEvent>,
+    mut process_completed_event: EventReader<ProcessCompleted>,
 ) {
-    for command_output in shell_command_output.read() {
+    for command_output in process_output_event.read() {
         for line in command_output.output.iter() {
             info!("Output Line ({}): {line}", command_output.pid);
         }
     }
-    if !shell_command_completed.is_empty() {
-        let completed = shell_command_completed.read().last().unwrap();
+    if !process_completed_event.is_empty() {
+        let completed = process_completed_event.read().last().unwrap();
         info!(
             "Command completed (PID - {}, Success - {}): {}",
             completed.pid, completed.success, completed.command
