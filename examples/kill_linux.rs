@@ -2,8 +2,8 @@ use std::time::Duration;
 
 use bevy::{prelude::*, time::common_conditions::on_timer};
 use bevy_local_commands::{
-    ActiveProcessMap, BevyLocalCommandsPlugin, KillShellCommand, RunShellCommand,
-    ShellCommandCompleted, ShellCommandOutput,
+    ActiveProcessMap, BevyLocalCommandsPlugin, KillProcess, ProcessCompleted, ProcessOutputEvent,
+    RunProcess,
 };
 
 fn main() {
@@ -16,26 +16,23 @@ fn main() {
         .run();
 }
 
-fn startup(mut shell_commands: EventWriter<RunShellCommand>) {
-    shell_commands.send(RunShellCommand::new(
+fn startup(mut shell_commands: EventWriter<RunProcess>) {
+    shell_commands.send(RunProcess::new(
         "bash",
         vec!["-c", "echo Sleeping for 10s && sleep 10 && echo Done"],
     ));
 }
 
-fn kill(
-    active_processes: Res<ActiveProcessMap>,
-    mut kill_shell_command: EventWriter<KillShellCommand>,
-) {
+fn kill(active_processes: Res<ActiveProcessMap>, mut kill_shell_command: EventWriter<KillProcess>) {
     for &pid in active_processes.0.keys() {
         info!("Killing {pid}");
-        kill_shell_command.send(KillShellCommand(pid));
+        kill_shell_command.send(KillProcess(pid));
     }
 }
 
 fn update(
-    mut shell_command_output: EventReader<ShellCommandOutput>,
-    mut shell_command_completed: EventReader<ShellCommandCompleted>,
+    mut shell_command_output: EventReader<ProcessOutputEvent>,
+    mut shell_command_completed: EventReader<ProcessCompleted>,
 ) {
     for command_output in shell_command_output.read() {
         for line in command_output.output.iter() {

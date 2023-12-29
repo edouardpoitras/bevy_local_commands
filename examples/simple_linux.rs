@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use bevy_local_commands::{
-    BevyLocalCommandsPlugin, RunShellCommand, ShellCommandCompleted, ShellCommandOutput,
+    BevyLocalCommandsPlugin, ProcessCompleted, ProcessOutputEvent, RunProcess,
 };
 
 fn main() {
@@ -11,16 +11,16 @@ fn main() {
         .run();
 }
 
-fn startup(mut shell_commands: EventWriter<RunShellCommand>) {
-    shell_commands.send(RunShellCommand::new(
+fn startup(mut shell_commands: EventWriter<RunProcess>) {
+    shell_commands.send(RunProcess::new(
         "bash",
         vec!["-c", "echo Sleeping for 1s && sleep 1 && echo Done"],
     ));
 }
 
 fn update(
-    mut shell_command_output: EventReader<ShellCommandOutput>,
-    mut shell_command_completed: EventReader<ShellCommandCompleted>,
+    mut shell_command_output: EventReader<ProcessOutputEvent>,
+    mut shell_command_completed: EventReader<ProcessCompleted>,
 ) {
     for command_output in shell_command_output.read() {
         for line in command_output.output.iter() {

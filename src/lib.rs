@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use bevy::tasks::IoTaskPool;
 use bevy::tasks::Task;
 use bevy::utils::HashMap;
+use std::io;
 use std::io::prelude::*;
 use std::io::BufReader;
 use std::process::Child;
@@ -14,14 +15,14 @@ use std::sync::Mutex;
 type Pid = u32;
 
 #[derive(Debug, Event)]
-pub struct RunShellCommand {
+pub struct RunProcess {
     program: String,
     arguments: Vec<String>,
 }
 
-impl RunShellCommand {
-    pub fn new<S: Into<String>>(program: S, arguments: Vec<S>) -> RunShellCommand {
-        RunShellCommand {
+impl RunProcess {
+    pub fn new<S: Into<String>>(program: S, arguments: Vec<S>) -> RunProcess {
+        RunProcess {
             program: program.into(),
             arguments: arguments.into_iter().map(|s| s.into()).collect(),
         }
@@ -29,13 +30,13 @@ impl RunShellCommand {
 }
 
 #[derive(Debug, Event)]
-pub struct ShellCommandStarted {
+pub struct ProcessStarted {
     pub command: String,
     pub pid: Pid,
 }
 
 #[derive(Debug, Event)]
-pub struct ShellCommandOutput {
+pub struct ProcessOutputEvent {
     pub pid: Pid,
     pub command: String,
     pub output: Vec<String>,
@@ -45,10 +46,15 @@ pub struct ShellCommandOutput {
 /// IE: 'sleep 9999' won't be killed cause no output is produced.
 /// Work-arounds/fixes are being considered.
 #[derive(Debug, Event)]
-pub struct KillShellCommand(pub Pid);
+pub struct KillProcess(pub Pid);
+
+#[derive(Debug, Event, PartialEq, Eq, Clone)]
+pub enum ProcessError {
+    FailedToStart,
+}
 
 #[derive(Debug, Event)]
-pub struct ShellCommandCompleted {
+pub struct ProcessCompleted {
     pub success: bool,
     pub pid: u32,
     pub command: String,
@@ -73,11 +79,11 @@ pub struct BevyLocalCommandsPlugin;
 
 impl Plugin for BevyLocalCommandsPlugin {
     fn build(&self, app: &mut App) {
-        app.add_event::<RunShellCommand>()
-            .add_event::<ShellCommandStarted>()
-            .add_event::<ShellCommandOutput>()
-            .add_event::<KillShellCommand>()
-            .add_event::<ShellCommandCompleted>()
+        app.add_event::<RunProcess>()
+            .add_event::<ProcessStarted>()
+            .add_event::<ProcessOutputEvent>()
+            .add_event::<KillProcess>()
+            .add_event::<ProcessCompleted>()
             .init_resource::<ActiveProcessMap>()
             .add_systems(
                 Update,
@@ -93,20 +99,25 @@ impl Plugin for BevyLocalCommandsPlugin {
 }
 
 fn handle_new_process(
-    mut run_shell_command_event: EventReader<RunShellCommand>,
-    mut shell_command_started_event: EventWriter<ShellCommandStarted>,
+    mut run_process_event: EventReader<RunProcess>,
+    mut process_started_event: EventWriter<ProcessStarted>,
+    mut process_error_event: EventWriter<ProcessError>,
     mut active_process_map: ResMut<ActiveProcessMap>,
 ) {
-    for run_shell_command in run_shell_command_event.read() {
+    for run_shell_command in run_process_event.read() {
         // Assemble the command
         let mut cmd = Command::new(run_shell_command.program.clone());
         cmd.args(run_shell_command.arguments.clone())
             .stdout(Stdio::piped());
 
-        let active_process = spawn_process(cmd);
+        let Ok(active_process) = spawn_process(cmd) else {
+            process_error_event.send(ProcessError::FailedToStart);
+            continue;
+        };
+
         let pid = active_process.process.id();
 
-        shell_command_started_event.send(ShellCommandStarted {
+        process_started_event.send(ProcessStarted {
             command: format!("{:?}", active_process.command),
             pid,
         });
@@ -117,7 +128,7 @@ fn handle_new_process(
 
 fn handle_shell_command_output(
     mut active_process_map: ResMut<ActiveProcessMap>,
-    mut shell_command_output: EventWriter<ShellCommandOutput>,
+    mut shell_command_output: EventWriter<ProcessOutputEvent>,
 ) {
     for (&pid, active_process) in active_process_map.0.iter_mut() {
         if let Ok(mut output_buffer) = active_process.output_buffer.0.lock() {
@@ -126,7 +137,7 @@ fn handle_shell_command_output(
             std::mem::swap(&mut *output_buffer, &mut output);
 
             if !output.is_empty() {
-                shell_command_output.send(ShellCommandOutput {
+                shell_command_output.send(ProcessOutputEvent {
                     pid,
                     command: format!("{:?}", active_process.command),
                     output,
@@ -138,7 +149,7 @@ fn handle_shell_command_output(
 
 fn handle_kill_process(
     mut active_process_map: ResMut<ActiveProcessMap>,
-    mut kill_shell_commands: EventReader<KillShellCommand>,
+    mut kill_shell_commands: EventReader<KillProcess>,
 ) {
     for kill_shell_command in kill_shell_commands.read() {
         let pid = kill_shell_command.0;
@@ -155,7 +166,7 @@ fn handle_kill_process(
 
 fn handle_completed_shell_commands(
     mut active_process_map: ResMut<ActiveProcessMap>,
-    mut shell_command_completed_event: EventWriter<ShellCommandCompleted>,
+    mut shell_command_completed_event: EventWriter<ProcessCompleted>,
 ) {
     // Remember which processes completed so we can remove them from the map
     let mut completed_processes = Vec::new();
@@ -163,7 +174,7 @@ fn handle_completed_shell_commands(
     for (&pid, active_process) in active_process_map.0.iter_mut() {
         if active_process.task.is_finished() {
             let exit_status = active_process.process.wait().unwrap();
-            shell_command_completed_event.send(ShellCommandCompleted {
+            shell_command_completed_event.send(ProcessCompleted {
                 command: format!("{:?}", active_process.command),
                 pid,
                 success: exit_status.success(),
@@ -179,9 +190,9 @@ fn handle_completed_shell_commands(
     }
 }
 
-fn spawn_process(mut command: Command) -> ActiveProcess {
+fn spawn_process(mut command: Command) -> io::Result<ActiveProcess> {
     // Start running the process
-    let mut process = command.spawn().unwrap();
+    let mut process = command.spawn()?;
     let stdout = process.stdout.take().unwrap();
     let pid = process.id();
 
@@ -211,10 +222,10 @@ fn spawn_process(mut command: Command) -> ActiveProcess {
         }
     });
 
-    ActiveProcess {
+    Ok(ActiveProcess {
         command,
         process,
         output_buffer,
         task,
-    }
+    })
 }
