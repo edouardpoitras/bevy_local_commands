@@ -90,6 +90,7 @@ impl Plugin for BevyLocalCommandsPlugin {
             .add_event::<ProcessOutputEvent>()
             .add_event::<KillProcess>()
             .add_event::<ProcessCompleted>()
+            .add_event::<ProcessError>()
             .init_resource::<ActiveProcessMap>()
             .add_systems(
                 Update,
