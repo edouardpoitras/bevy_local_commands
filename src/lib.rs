@@ -1,24 +1,28 @@
 use bevy::prelude::*;
 use bevy::tasks::IoTaskPool;
 use bevy::tasks::Task;
-use duct::cmd;
-use duct::Expression;
-use futures_lite::future;
+use bevy::utils::HashMap;
+use std::io;
 use std::io::prelude::*;
 use std::io::BufReader;
+use std::process::Child;
+use std::process::Command;
+use std::process::Stdio;
 use std::sync::Arc;
 use std::sync::Mutex;
-use std::time::SystemTime;
+
+/// The ID of a process.
+type Pid = u32;
 
 #[derive(Debug, Event)]
-pub struct RunShellCommand {
+pub struct RunProcess {
     program: String,
     arguments: Vec<String>,
 }
 
-impl RunShellCommand {
-    pub fn new<S: Into<String>>(program: S, arguments: Vec<S>) -> RunShellCommand {
-        RunShellCommand {
+impl RunProcess {
+    pub fn new<S: Into<String>>(program: S, arguments: Vec<S>) -> RunProcess {
+        RunProcess {
             program: program.into(),
             arguments: arguments.into_iter().map(|s| s.into()).collect(),
         }
@@ -26,14 +30,14 @@ impl RunShellCommand {
 }
 
 #[derive(Debug, Event)]
-pub struct ShellCommandStarted {
+pub struct ProcessStarted {
     pub command: String,
-    pub pid: u32,
+    pub pid: Pid,
 }
 
 #[derive(Debug, Event)]
-pub struct ShellCommandOutput {
-    pub pid: u32,
+pub struct ProcessOutputEvent {
+    pub pid: Pid,
     pub command: String,
     pub output: Vec<String>,
 }
@@ -42,264 +46,195 @@ pub struct ShellCommandOutput {
 /// IE: 'sleep 9999' won't be killed cause no output is produced.
 /// Work-arounds/fixes are being considered.
 #[derive(Debug, Event)]
-pub struct KillShellCommand(pub u32);
+pub struct KillProcess(pub Pid);
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub enum ProcessErrorInfo {
+    FailedToStart,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Event)]
+pub struct ProcessError {
+    pub command: String,
+    pub info: ProcessErrorInfo,
+}
 
 #[derive(Debug, Event)]
-pub struct ShellCommandCompleted {
+pub struct ProcessCompleted {
     pub success: bool,
     pub pid: u32,
     pub command: String,
-    pub output_buffer: Vec<String>,
 }
 
-struct ActiveShellCommand {
-    command: String,
-    task: Option<Task<(bool, Vec<String>)>>,
-    pid: u32,
-    output_lines: Option<Vec<String>>,
-    kill_requested: bool,
+/// The lines written to the standard output by a given process.
+#[derive(Debug, Default, Clone)]
+struct ProcessOutputBuffer(Arc<Mutex<Vec<String>>>);
+
+#[derive(Debug)]
+pub struct ActiveProcess {
+    command: Command,
+    process: Child,
+    task: Task<()>,
+    output_buffer: ProcessOutputBuffer,
 }
 
 #[derive(Default, Resource)]
-struct ActiveShellCommands(Vec<Arc<Mutex<ActiveShellCommand>>>);
+pub struct ActiveProcessMap(pub HashMap<Pid, ActiveProcess>);
 
 pub struct BevyLocalCommandsPlugin;
 
 impl Plugin for BevyLocalCommandsPlugin {
     fn build(&self, app: &mut App) {
-        app.add_event::<RunShellCommand>()
-            .add_event::<ShellCommandStarted>()
-            .add_event::<ShellCommandOutput>()
-            .add_event::<KillShellCommand>()
-            .add_event::<ShellCommandCompleted>()
-            .init_resource::<ActiveShellCommands>()
+        app.add_event::<RunProcess>()
+            .add_event::<ProcessStarted>()
+            .add_event::<ProcessOutputEvent>()
+            .add_event::<KillProcess>()
+            .add_event::<ProcessCompleted>()
+            .add_event::<ProcessError>()
+            .init_resource::<ActiveProcessMap>()
             .add_systems(
                 Update,
                 (
-                    handle_new_shell_commands,
-                    handle_shell_command_output,
-                    handle_kill_shell_command,
-                    handle_completed_shell_commands,
-                ),
+                    handle_new_process,
+                    handle_kill_process,
+                    handle_process_output,
+                    handle_completed_process,
+                )
+                    .chain(),
             );
     }
 }
 
-fn get_shell_command_string(run_shell_command: &RunShellCommand) -> String {
-    format!(
-        "{} {}",
-        run_shell_command.program,
-        &run_shell_command.arguments.join(" ")
-    )
-}
-
-fn handle_new_shell_commands(
-    mut run_shell_command_event: EventReader<RunShellCommand>,
-    mut shell_command_started_event: EventWriter<ShellCommandStarted>,
-    mut shell_command_completed_event: EventWriter<ShellCommandCompleted>,
-    mut active_shell_commands: ResMut<ActiveShellCommands>,
+fn handle_new_process(
+    mut run_process_event: EventReader<RunProcess>,
+    mut process_started_event: EventWriter<ProcessStarted>,
+    mut process_error_event: EventWriter<ProcessError>,
+    mut active_process_map: ResMut<ActiveProcessMap>,
 ) {
-    for run_shell_command in run_shell_command_event.read() {
-        let command_string = get_shell_command_string(run_shell_command);
-        let expression = cmd(&run_shell_command.program, &run_shell_command.arguments);
-        let active_shell_command = spawn_shell_command(command_string.clone(), expression);
-        if active_shell_command.is_none() {
-            shell_command_completed_event.send(ShellCommandCompleted {
-                pid: 0,
-                command: command_string.clone(),
-                success: false,
-                output_buffer: vec![],
+    for run_shell_command in run_process_event.read() {
+        // Assemble the command
+        let mut cmd = Command::new(run_shell_command.program.clone());
+        cmd.args(run_shell_command.arguments.clone())
+            .stdout(Stdio::piped());
+
+        let command = format!("{cmd:?}");
+
+        let Ok(active_process) = spawn_process(cmd) else {
+            process_error_event.send(ProcessError {
+                command,
+                info: ProcessErrorInfo::FailedToStart,
             });
             continue;
-        }
-        let active_shell_command = active_shell_command.unwrap();
-        shell_command_started_event.send(ShellCommandStarted {
-            command: command_string,
-            pid: active_shell_command.lock().unwrap().pid, // TODO: Get rid of unwrap
-        });
-        active_shell_commands.0.push(active_shell_command);
+        };
+
+        let pid = active_process.process.id();
+
+        process_started_event.send(ProcessStarted { command, pid });
+
+        active_process_map.0.insert(pid, active_process);
     }
 }
 
-fn handle_shell_command_output(
-    mut active_shell_commands: ResMut<ActiveShellCommands>,
-    mut shell_command_output: EventWriter<ShellCommandOutput>,
+fn handle_process_output(
+    mut active_process_map: ResMut<ActiveProcessMap>,
+    mut process_output_event: EventWriter<ProcessOutputEvent>,
 ) {
-    for active_shell_command in active_shell_commands.0.iter_mut() {
-        let asc = active_shell_command.lock();
-        if asc.is_ok() {
-            let mut asc = asc.unwrap();
-            if asc.output_lines.is_some() {
-                let pid = asc.pid;
-                let lines = asc.output_lines.take();
-                shell_command_output.send(ShellCommandOutput {
+    for (&pid, active_process) in active_process_map.0.iter_mut() {
+        if let Ok(mut output_buffer) = active_process.output_buffer.0.lock() {
+            // Send the buffered output in the event while clearing the output buffer
+            let mut output = Vec::<String>::new();
+            std::mem::swap(&mut *output_buffer, &mut output);
+
+            if !output.is_empty() {
+                process_output_event.send(ProcessOutputEvent {
                     pid,
-                    command: asc.command.clone(),
-                    output: lines.unwrap(),
+                    command: format!("{:?}", active_process.command),
+                    output,
                 });
             }
         }
     }
 }
 
-fn handle_kill_shell_command(
-    mut active_shell_commands: ResMut<ActiveShellCommands>,
-    mut kill_shell_commands: EventReader<KillShellCommand>,
+fn handle_kill_process(
+    mut active_process_map: ResMut<ActiveProcessMap>,
+    mut kill_process_event: EventReader<KillProcess>,
 ) {
-    for kill_shell_command in kill_shell_commands.read() {
+    for kill_shell_command in kill_process_event.read() {
         let pid = kill_shell_command.0;
-        let mut found = false;
-        for active_shell_command in active_shell_commands.0.iter_mut() {
-            let asc = active_shell_command.lock();
-            if asc.is_ok() {
-                let mut asc = asc.unwrap();
-                if asc.pid == pid {
-                    info!(
-                        "Killing shell command (PID: {}, Command: {})",
-                        pid, &asc.command
-                    );
-                    asc.kill_requested = true;
-                    found = true;
-                    break;
-                }
-            }
-        }
-        if !found {
+
+        if let Some(active_process) = active_process_map.0.get_mut(&pid) {
+            // Kill the process
+            // TODO: Handle unwrap
+            active_process.process.kill().unwrap();
+        } else {
             warn!("Could not find and kill shell command (PID: {})", pid);
         }
     }
 }
 
-fn handle_completed_shell_commands(
-    mut active_shell_commands: ResMut<ActiveShellCommands>,
-    mut shell_command_completed_event: EventWriter<ShellCommandCompleted>,
-    mut shell_command_output_events: EventWriter<ShellCommandOutput>,
+fn handle_completed_process(
+    mut active_process_map: ResMut<ActiveProcessMap>,
+    mut process_completed_event: EventWriter<ProcessCompleted>,
 ) {
-    for active_shell_command in active_shell_commands.0.iter_mut() {
-        if let Ok(mut asc) = active_shell_command.lock() {
-            let result = asc.task.as_mut().and_then(|task_result| {
-                if task_result.is_finished() {
-                    return future::block_on(future::poll_once(task_result));
-                }
-                None
+    // Remember which processes completed so we can remove them from the map
+    let mut completed_processes = Vec::new();
+
+    for (&pid, active_process) in active_process_map.0.iter_mut() {
+        if active_process.task.is_finished() {
+            let exit_status = active_process.process.wait().unwrap();
+            process_completed_event.send(ProcessCompleted {
+                command: format!("{:?}", active_process.command),
+                pid,
+                success: exit_status.success(),
             });
-            if let Some((result, last_lines)) = result {
-                info!(
-                    "Command Completed (PID - {}, Success - {}): {}",
-                    asc.pid, result, asc.command
-                );
-                shell_command_output_events.send(ShellCommandOutput {
-                    pid: asc.pid,
-                    command: asc.command.clone(),
-                    output: last_lines.clone(),
-                });
-                shell_command_completed_event.send(ShellCommandCompleted {
-                    success: result,
-                    pid: asc.pid,
-                    command: asc.command.clone(),
-                    output_buffer: last_lines,
-                });
-            }
+
+            completed_processes.push(pid);
         }
     }
-    active_shell_commands.0.retain_mut(|asc| {
-        if let Ok(asc) = asc.lock() {
-            if let Some(task) = &asc.task {
-                if task.is_finished() || asc.task.is_none() {
-                    return false;
-                }
-            }
-        }
-        true
-    });
+
+    // Clean up process map
+    for pid in completed_processes {
+        active_process_map.0.remove(&pid);
+    }
 }
 
-fn spawn_shell_command(
-    command_string: String,
-    expression: Expression,
-) -> Option<Arc<Mutex<ActiveShellCommand>>> {
-    let cs = command_string.clone();
-    let mut result = false;
-    let reader = expression.stderr_to_stdout().reader();
-    if let Ok(reader_handle) = reader {
-        let mut pid_value = None;
-        if let Some(pid) = reader_handle.pids().first() {
-            pid_value = Some(*pid);
-        }
-        if let Some(pid) = pid_value {
-            info!("Spawned command with pid {}: {}", pid, &command_string);
-            let active_shell_command = ActiveShellCommand {
-                command: cs.clone(),
-                task: None,
-                pid,
-                output_lines: None,
-                kill_requested: false,
-            };
-            let active_shell_command = Arc::new(Mutex::new(active_shell_command));
-            let asc_moved = active_shell_command.clone();
-            let thread_pool = IoTaskPool::get();
-            let task = thread_pool.spawn(async move {
-                let mut lines = BufReader::new(&reader_handle).lines();
-                let mut output_lines: Vec<String> = vec![];
-                let mut time = SystemTime::now();
-                loop {
-                    // TODO: FIXME: This blocks the thread, which is why we can't kill until there's some output
-                    // Tried using heim library to kill process but had dependency hell issues
-                    let option_result_line = lines.next();
-                    if let Some(result_line) = option_result_line {
-                        if let Ok(line) = &result_line {
-                            if let Ok(mut asc) = asc_moved.lock() {
-                                output_lines.push(line.clone());
-                                let time_elapsed = time.elapsed().unwrap_or_default();
-                                // Only submit buffered lines and check for kill command every second
-                                if time_elapsed > std::time::Duration::from_secs(1) {
-                                    time = SystemTime::now();
-                                    asc.output_lines = Some(output_lines.clone());
-                                    output_lines.clear();
-                                    // Check for kill command.
-                                    if asc.kill_requested {
-                                        if reader_handle.kill().is_ok() {
-                                            break;
-                                        } else {
-                                            error!("Failed to kill process PID {}", pid)
-                                        }
-                                    }
-                                }
-                            } else {
-                                error!(
-                                    "Failed to access active shell command for PID {}: {}",
-                                    pid, command_string
-                                );
-                                warn!("We have probably lost command output lines");
-                            }
-                            continue;
-                        } else {
-                            error!(
-                                "Command Exit Error (PID {}): {:?}",
-                                pid,
-                                result_line.as_ref().err()
-                            );
-                        }
-                    } else {
-                        info!("Command (PID {}) Completed: {}", pid, &command_string);
-                        result = true;
-                    }
-                    break;
-                }
+fn spawn_process(mut command: Command) -> io::Result<ActiveProcess> {
+    // Start running the process
+    let mut process = command.spawn()?;
+    let stdout = process.stdout.take().unwrap();
+    let pid = process.id();
 
-                (result, output_lines)
-            });
-            if let Ok(mut asc) = active_shell_command.lock() {
-                asc.task = Some(task);
-            } else {
-                error!("Failed to add new active shell command: {}", &cs)
+    info!("Spawned command with pid {pid}: {command:?}");
+
+    let output_buffer = ProcessOutputBuffer::default();
+
+    let moved_buffer = output_buffer.clone();
+    let thread_pool = IoTaskPool::get();
+
+    // Read stdout and write it to the output buffer
+    let task = thread_pool.spawn(async move {
+        let mut reader = BufReader::new(stdout);
+
+        let mut line = String::new();
+
+        while let Ok(bytes) = reader.read_line(&mut line) {
+            if bytes == 0 {
+                break;
             }
-            return Some(active_shell_command);
-        } else {
-            error!("Failed to get PID of shell command: {}", &command_string);
+
+            if let Ok(mut buffer) = moved_buffer.0.lock() {
+                // The line includes the terminating new line, but we already have all lines separated
+                buffer.push(line.trim_end_matches('\n').to_string());
+                line.clear();
+            }
         }
-    } else {
-        warn!("Failed to spawn shell command: {}", &command_string);
-    }
-    None
+    });
+
+    Ok(ActiveProcess {
+        command,
+        process,
+        output_buffer,
+        task,
+    })
 }

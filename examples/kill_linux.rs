@@ -1,6 +1,9 @@
-use bevy::prelude::*;
+use std::time::Duration;
+
+use bevy::{prelude::*, time::common_conditions::on_timer};
 use bevy_local_commands::{
-    BevyLocalCommandsPlugin, ProcessCompleted, ProcessOutputEvent, RunProcess,
+    ActiveProcessMap, BevyLocalCommandsPlugin, KillProcess, ProcessCompleted, ProcessOutputEvent,
+    RunProcess,
 };
 
 fn main() {
@@ -8,14 +11,23 @@ fn main() {
         .add_plugins((DefaultPlugins, BevyLocalCommandsPlugin))
         .add_systems(Startup, startup)
         .add_systems(Update, update)
+        // Kill the command after 6s
+        .add_systems(Update, kill.run_if(on_timer(Duration::from_secs(6))))
         .run();
 }
 
 fn startup(mut shell_commands: EventWriter<RunProcess>) {
     shell_commands.send(RunProcess::new(
         "bash",
-        vec!["-c", "echo Sleeping for 1s && sleep 1 && echo Done"],
+        vec!["-c", "echo Sleeping for 10s && sleep 10 && echo Done"],
     ));
+}
+
+fn kill(active_processes: Res<ActiveProcessMap>, mut kill_process_event: EventWriter<KillProcess>) {
+    for &pid in active_processes.0.keys() {
+        info!("Killing {pid}");
+        kill_process_event.send(KillProcess(pid));
+    }
 }
 
 fn update(
