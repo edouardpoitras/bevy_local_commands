@@ -22,9 +22,9 @@ Bevy plugin that exposes events that can be used to execute simple shell command
 
 ```rust
 fn run_command(
-    mut shell_commands: EventWriter<RunShellCommand>,
+    mut shell_commands: EventWriter<RunProcess>,
 ) {
-    shell_commands.send(RunShellCommand::new("bash", vec!["-c", "sleep 1 && echo slept"]));
+    shell_commands.send(RunProcess::new("bash", vec!["-c", "sleep 1 && echo slept"]));
 }
 ```
 
@@ -32,12 +32,12 @@ fn run_command(
 
 ```rust
 fn kill_started_command(
-    mut shell_command_started: EventReader<ShellCommandStarted>,
-    mut kill_commands: EventWriter<KillShellCommand>,
+    mut process_started: EventReader<ProcessStarted>,
+    mut kill_process: EventWriter<KillProcess>,
 ) {
-    if let (Some(shell_command_started)) = shell_command_started.iter().last() {
-        warn!("Sending kill command for {}", shell_command_started.pid);
-        kill_shell_commands.send(KillShellCommand(shell_command_started.pid));
+    if let (Some(process_started)) = process_started.iter().last() {
+        warn!("Sending kill command for {}", process_started.pid);
+        kill_process.send(KillProcess(process_started.pid));
     }
 }
 ```
@@ -47,10 +47,10 @@ Note: Current limitation - kill will only trigger when the command generates out
 **Receive command output:**
 
 ```rust
-fn get_command_output(mut shell_command_output: EventReader<ShellCommandOutput>) {
-    for command_output in shell_command_output.iter() {
-        info!("Command PID: {}", command_output.pid);
-        for line in  command_output.output.iter() {
+fn get_command_output(mut process_output_event: EventReader<ProcessOutputEvent>) {
+    for output in process_output_event.iter() {
+        info!("Command PID: {}", output.pid);
+        for line in output.output.iter() {
             info!("Line Output: {}", line);
         }
     }
@@ -60,8 +60,8 @@ fn get_command_output(mut shell_command_output: EventReader<ShellCommandOutput>)
 **See commands completed:**
 
 ```rust
-fn get_completed(mut shell_command_completed: EventReader<ShellCommandCompleted>) {
-    for completed in shell_command_completed.iter() {
+fn get_completed(mut process_completed: EventReader<ProcessCompleted>) {
+    for completed in process_completed.iter() {
         info!("Command completed (PID - {}, Success - {}): {}", completed.pid, completed.success, completed.command);
     }
 }
@@ -70,7 +70,9 @@ fn get_completed(mut shell_command_completed: EventReader<ShellCommandCompleted>
 ## Todo
 
 - [ ] Better way to kill commands that are still running
-- [ ] Windows/Mac testing (not sure if it works yet)
+- [ ] Examples for each platform
+- [ ] Example showing handling of errors
+- [ ] Mac testing (not sure if it works yet)
 
 
 ## Bevy Compatilibity
