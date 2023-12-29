@@ -48,9 +48,15 @@ pub struct ProcessOutputEvent {
 #[derive(Debug, Event)]
 pub struct KillProcess(pub Pid);
 
-#[derive(Debug, Event, PartialEq, Eq, Clone)]
-pub enum ProcessError {
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub enum ProcessErrorInfo {
     FailedToStart,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Event)]
+pub struct ProcessError {
+    pub command: String,
+    pub info: ProcessErrorInfo,
 }
 
 #[derive(Debug, Event)]
@@ -110,17 +116,19 @@ fn handle_new_process(
         cmd.args(run_shell_command.arguments.clone())
             .stdout(Stdio::piped());
 
+        let command = format!("{cmd:?}");
+
         let Ok(active_process) = spawn_process(cmd) else {
-            process_error_event.send(ProcessError::FailedToStart);
+            process_error_event.send(ProcessError {
+                command,
+                info: ProcessErrorInfo::FailedToStart,
+            });
             continue;
         };
 
         let pid = active_process.process.id();
 
-        process_started_event.send(ProcessStarted {
-            command: format!("{:?}", active_process.command),
-            pid,
-        });
+        process_started_event.send(ProcessStarted { command, pid });
 
         active_process_map.0.insert(pid, active_process);
     }
