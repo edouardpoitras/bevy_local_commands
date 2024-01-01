@@ -10,3 +10,7 @@ repository = "https://github.com/edouardpoitras/bevy_local_commands"
 bevy = { version = "0.12", default-features = false, features = [
   "multi-threaded",
 ] }
+
+[lints.clippy]
+# Bevy queries are often complex types
+type_complexity = "allow"
