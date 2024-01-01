@@ -11,8 +11,8 @@ fn main() {
         .add_plugins((MinimalPlugins, BevyLocalCommandsPlugin))
         .add_systems(Startup, startup)
         .add_systems(Update, update)
-        // Kill the command after 6s
-        .add_systems(Update, kill.run_if(on_timer(Duration::from_secs(6))))
+        // Kill the command after 2s
+        .add_systems(Update, kill.run_if(on_timer(Duration::from_secs(2))))
         .run();
 }
 
@@ -20,12 +20,12 @@ fn startup(mut shell_commands: EventWriter<RunProcess>) {
     if cfg!(windows) {
         shell_commands.send(RunProcess::new(
             "cmd",
-            vec!["/C", "echo Sleeping for 10s && timeout 10 && echo Done"],
+            vec!["/C", "echo Sleeping for 4s && timeout 4 && echo This should not print or execute && timeout 100"],
         ));
     } else if cfg!(unix) {
         shell_commands.send(RunProcess::new(
             "sh",
-            vec!["-c", "echo Sleeping for 10s && sleep 10 && echo Done"],
+            vec!["-c", "echo Sleeping for 4s && sleep 4 && echo This should not print or execute && sleep 100"],
         ));
     } else {
         println!("Could not choose appropriate command to run on current platform");

@@ -1,7 +1,5 @@
 use bevy::prelude::*;
-use bevy_local_commands::{
-    BevyLocalCommandsPlugin, RunProcess, ProcessError,
-};
+use bevy_local_commands::{BevyLocalCommandsPlugin, ProcessError, RunProcess};
 
 fn main() {
     App::new()
@@ -12,17 +10,15 @@ fn main() {
 }
 
 fn startup(mut shell_commands: EventWriter<RunProcess>) {
-    shell_commands.send(RunProcess::new(
-        "commandthatdoesnotexist",
-        vec!["-flags"],
-    ));
+    shell_commands.send(RunProcess::new("commandthatdoesnotexist", vec!["-flags"]));
 }
 
-fn update(
-    mut process_error: EventReader<ProcessError>,
-) {
+fn update(mut process_error: EventReader<ProcessError>) {
     for error in process_error.read() {
-        println!("Error running command ({}): {:?}", error.command, error.info);
+        println!(
+            "Error running command ({}): {:?}",
+            error.command, error.info
+        );
         // Quit the app
         std::process::exit(0);
     }

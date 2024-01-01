@@ -69,7 +69,6 @@ fn get_completed(mut process_completed: EventReader<ProcessCompleted>) {
 
 ## Todo
 
-- [ ] Better way to kill commands that are still running
 - [ ] Mac testing (not sure if it works yet)
 
 
