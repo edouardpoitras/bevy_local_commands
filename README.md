@@ -42,8 +42,6 @@ fn kill_started_command(
 }
 ```
 
-Note: Current limitation - kill will only trigger when the command generates output.
-
 **Receive command output:**
 
 ```rust
