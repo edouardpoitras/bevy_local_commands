@@ -5,7 +5,7 @@ use bevy_local_commands::{
 
 fn main() {
     App::new()
-        .add_plugins((DefaultPlugins, BevyLocalCommandsPlugin))
+        .add_plugins((MinimalPlugins, BevyLocalCommandsPlugin))
         .add_systems(Startup, startup)
         .add_systems(Update, update)
         .run();
@@ -24,14 +24,16 @@ fn update(
 ) {
     for command_output in process_output_event.read() {
         for line in command_output.output.iter() {
-            info!("Output Line ({}): {line}", command_output.pid);
+            println!("Output Line ({}): {line}", command_output.pid);
         }
     }
     if !process_completed_event.is_empty() {
         let completed = process_completed_event.read().last().unwrap();
-        info!(
+        println!(
             "Command completed (PID - {}, Success - {}): {}",
             completed.pid, completed.success, completed.command
         );
+        // Quit the app
+        std::process::exit(0);
     }
 }
