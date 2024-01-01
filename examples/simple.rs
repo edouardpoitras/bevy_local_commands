@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use bevy_local_commands::{
-    BevyLocalCommandsPlugin, ProcessCompleted, ProcessOutputEvent, RunProcess,
+    BevyLocalCommandsPlugin, ProcessCompleted, ProcessOutput, RunProcess,
 };
 
 fn main() {
@@ -29,7 +29,7 @@ fn startup(mut shell_commands: EventWriter<RunProcess>) {
 }
 
 fn update(
-    mut process_output_event: EventReader<ProcessOutputEvent>,
+    mut process_output_event: EventReader<ProcessOutput>,
     mut process_completed_event: EventReader<ProcessCompleted>,
 ) {
     for command_output in process_output_event.read() {

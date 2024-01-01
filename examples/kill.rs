@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use bevy::{prelude::*, time::common_conditions::on_timer};
 use bevy_local_commands::{
-    ActiveProcessMap, BevyLocalCommandsPlugin, KillProcess, ProcessCompleted, ProcessOutputEvent,
+    ActiveProcessMap, BevyLocalCommandsPlugin, KillProcess, ProcessCompleted, ProcessOutput,
     RunProcess,
 };
 
@@ -41,7 +41,7 @@ fn kill(active_processes: Res<ActiveProcessMap>, mut kill_process_event: EventWr
 }
 
 fn update(
-    mut process_output_event: EventReader<ProcessOutputEvent>,
+    mut process_output_event: EventReader<ProcessOutput>,
     mut process_completed_event: EventReader<ProcessCompleted>,
 ) {
     for command_output in process_output_event.read() {

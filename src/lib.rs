@@ -36,7 +36,7 @@ pub struct ProcessStarted {
 }
 
 #[derive(Debug, Event)]
-pub struct ProcessOutputEvent {
+pub struct ProcessOutput {
     pub pid: Pid,
     pub command: String,
     pub output: Vec<String>,
@@ -87,7 +87,7 @@ impl Plugin for BevyLocalCommandsPlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<RunProcess>()
             .add_event::<ProcessStarted>()
-            .add_event::<ProcessOutputEvent>()
+            .add_event::<ProcessOutput>()
             .add_event::<KillProcess>()
             .add_event::<ProcessCompleted>()
             .add_event::<ProcessError>()
@@ -137,7 +137,7 @@ fn handle_new_process(
 
 fn handle_process_output(
     mut active_process_map: ResMut<ActiveProcessMap>,
-    mut process_output_event: EventWriter<ProcessOutputEvent>,
+    mut process_output_event: EventWriter<ProcessOutput>,
 ) {
     for (&pid, active_process) in active_process_map.0.iter_mut() {
         if let Ok(mut output_buffer) = active_process.output_buffer.0.lock() {
@@ -146,7 +146,7 @@ fn handle_process_output(
             std::mem::swap(&mut *output_buffer, &mut output);
 
             if !output.is_empty() {
-                process_output_event.send(ProcessOutputEvent {
+                process_output_event.send(ProcessOutput {
                     pid,
                     command: format!("{:?}", active_process.command),
                     output,

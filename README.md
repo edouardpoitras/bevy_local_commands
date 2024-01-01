@@ -45,7 +45,7 @@ fn kill_started_command(
 **Receive command output:**
 
 ```rust
-fn get_command_output(mut process_output_event: EventReader<ProcessOutputEvent>) {
+fn get_command_output(mut process_output_event: EventReader<ProcessOutput>) {
     for output in process_output_event.iter() {
         info!("Command PID: {}", output.pid);
         for line in output.output.iter() {
