@@ -1,7 +1,5 @@
 use bevy::prelude::*;
-use bevy_local_commands::{
-    BevyLocalCommandsPlugin, ProcessCompleted, ProcessOutput, RunProcess,
-};
+use bevy_local_commands::{BevyLocalCommandsPlugin, ProcessCompleted, ProcessOutput, RunProcess};
 
 fn main() {
     App::new()
