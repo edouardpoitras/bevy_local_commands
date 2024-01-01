@@ -111,7 +111,7 @@ fn handle_new_process(
     mut process_error_event: EventWriter<ProcessError>,
     mut active_process_map: ResMut<ActiveProcessMap>,
 ) {
-    for run_shell_command in run_process_event.read() {
+    for run_shell_command in run_process_event.iter() {
         // Assemble the command
         let mut cmd = Command::new(run_shell_command.program.clone());
         cmd.args(run_shell_command.arguments.clone())
@@ -160,7 +160,7 @@ fn handle_kill_process(
     mut active_process_map: ResMut<ActiveProcessMap>,
     mut kill_process_event: EventReader<KillProcess>,
 ) {
-    for kill_shell_command in kill_process_event.read() {
+    for kill_shell_command in kill_process_event.iter() {
         let pid = kill_shell_command.0;
 
         if let Some(active_process) = active_process_map.0.get_mut(&pid) {

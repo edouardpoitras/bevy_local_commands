@@ -44,13 +44,13 @@ fn update(
     mut process_output_event: EventReader<ProcessOutputEvent>,
     mut process_completed_event: EventReader<ProcessCompleted>,
 ) {
-    for command_output in process_output_event.read() {
+    for command_output in process_output_event.iter() {
         for line in command_output.output.iter() {
             println!("Output Line ({}): {line}", command_output.pid);
         }
     }
     if !process_completed_event.is_empty() {
-        let completed = process_completed_event.read().last().unwrap();
+        let completed = process_completed_event.iter().last().unwrap();
         println!(
             "Command completed (PID - {}, Success - {}): {}",
             completed.pid, completed.success, completed.command

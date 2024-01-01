@@ -14,7 +14,7 @@ fn startup(mut shell_commands: EventWriter<RunProcess>) {
 }
 
 fn update(mut process_error: EventReader<ProcessError>) {
-    for error in process_error.read() {
+    for error in process_error.iter() {
         println!(
             "Error running command ({}): {:?}",
             error.command, error.info
