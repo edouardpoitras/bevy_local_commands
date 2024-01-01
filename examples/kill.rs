@@ -17,10 +17,20 @@ fn main() {
 }
 
 fn startup(mut shell_commands: EventWriter<RunProcess>) {
-    shell_commands.send(RunProcess::new(
-        "bash",
-        vec!["-c", "echo Sleeping for 10s && sleep 10 && echo Done"],
-    ));
+    if cfg!(windows) {
+        shell_commands.send(RunProcess::new(
+            "cmd",
+            vec!["/C", "echo Sleeping for 10s && timeout 10 && echo Done"],
+        ));
+    } else if cfg!(unix) {
+        shell_commands.send(RunProcess::new(
+            "sh",
+            vec!["-c", "echo Sleeping for 10s && sleep 10 && echo Done"],
+        ));
+    } else {
+        println!("Could not choose appropriate command to run on current platform");
+        std::process::exit(0);
+    }
 }
 
 fn kill(active_processes: Res<ActiveProcessMap>, mut kill_process_event: EventWriter<KillProcess>) {
