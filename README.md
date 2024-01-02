@@ -42,12 +42,10 @@ fn kill_started_command(
 }
 ```
 
-Note: Current limitation - kill will only trigger when the command generates output.
-
 **Receive command output:**
 
 ```rust
-fn get_command_output(mut process_output_event: EventReader<ProcessOutputEvent>) {
+fn get_command_output(mut process_output_event: EventReader<ProcessOutput>) {
     for output in process_output_event.iter() {
         info!("Command PID: {}", output.pid);
         for line in output.output.iter() {
@@ -69,9 +67,6 @@ fn get_completed(mut process_completed: EventReader<ProcessCompleted>) {
 
 ## Todo
 
-- [ ] Better way to kill commands that are still running
-- [ ] Examples for each platform
-- [ ] Example showing handling of errors
 - [ ] Mac testing (not sure if it works yet)
 
 
