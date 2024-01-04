@@ -70,6 +70,16 @@ pub struct Process {
     output_buffer: ProcessOutputBuffer,
 }
 
+impl Process {
+    pub fn id(&self) -> Pid {
+        self.process.id()
+    }
+
+    pub fn kill(&mut self) -> io::Result<()> {
+        self.process.kill()
+    }
+}
+
 pub struct BevyLocalCommandsPlugin;
 
 impl Plugin for BevyLocalCommandsPlugin {
