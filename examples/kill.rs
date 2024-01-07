@@ -2,7 +2,7 @@ use std::{process::Command, time::Duration};
 
 use bevy::{prelude::*, time::common_conditions::on_timer};
 use bevy_local_commands::{
-    BevyLocalCommandsPlugin, KillProcess, LocalCommand, Process, ProcessCompleted, ProcessOutput,
+    BevyLocalCommandsPlugin, LocalCommand, Process, ProcessCompleted, ProcessOutput,
 };
 
 fn main() {
@@ -37,13 +37,10 @@ fn startup(mut commands: Commands) {
     println!("Spawned the command as entity {id:?}")
 }
 
-fn kill(
-    active_processes: Query<Entity, With<Process>>,
-    mut kill_process_event: EventWriter<KillProcess>,
-) {
-    for entity in active_processes.iter() {
+fn kill(mut active_processes: Query<(Entity, &mut Process)>) {
+    for (entity, mut process) in active_processes.iter_mut() {
         println!("Killing {entity:?}");
-        kill_process_event.send(KillProcess(entity));
+        process.kill().unwrap();
     }
 }
 

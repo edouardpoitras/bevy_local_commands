@@ -11,7 +11,7 @@ use std::sync::Arc;
 use std::sync::Mutex;
 
 /// The ID of a process.
-type Pid = u32;
+pub type Pid = u32;
 
 #[derive(Debug, Event)]
 pub struct ProcessStarted {
@@ -24,12 +24,6 @@ pub struct ProcessOutput {
     pub entity: Entity,
     pub output: Vec<String>,
 }
-
-/// This will only trigger on stdout/stderr events for the process.
-/// IE: 'sleep 9999' won't be killed cause no output is produced.
-/// Work-arounds/fixes are being considered.
-#[derive(Debug, Event)]
-pub struct KillProcess(pub Entity);
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum ProcessErrorInfo {
@@ -86,14 +80,12 @@ impl Plugin for BevyLocalCommandsPlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<ProcessStarted>()
             .add_event::<ProcessOutput>()
-            .add_event::<KillProcess>()
             .add_event::<ProcessCompleted>()
             .add_event::<ProcessError>()
             .add_systems(
                 Update,
                 (
                     handle_new_command,
-                    handle_kill_process,
                     handle_process_output,
                     handle_completed_process,
                 )
@@ -139,23 +131,6 @@ fn handle_process_output(
             if !output.is_empty() {
                 process_output_event.send(ProcessOutput { entity, output });
             }
-        }
-    }
-}
-
-fn handle_kill_process(
-    mut query: Query<&mut Process>,
-    mut kill_process_event: EventReader<KillProcess>,
-) {
-    for kill_shell_command in kill_process_event.read() {
-        let entity: Entity = kill_shell_command.0;
-
-        if let Ok(mut process) = query.get_mut(entity) {
-            // Kill the process
-            // TODO: Handle unwrap
-            process.process.kill().unwrap();
-        } else {
-            warn!("Could not find and kill shell command ({entity:?})");
         }
     }
 }
