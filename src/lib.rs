@@ -4,7 +4,9 @@ use bevy::tasks::Task;
 use std::io;
 use std::io::prelude::*;
 use std::io::BufReader;
+use std::io::BufWriter;
 use std::process::Child;
+use std::process::ChildStdin;
 use std::process::Command;
 use std::process::Stdio;
 use std::sync::Arc;
@@ -62,6 +64,7 @@ pub struct Process {
     process: Child,
     reader_task: Task<()>,
     output_buffer: ProcessOutputBuffer,
+    stdin_writer: BufWriter<ChildStdin>,
 }
 
 impl Process {
@@ -71,6 +74,38 @@ impl Process {
 
     pub fn kill(&mut self) -> io::Result<()> {
         self.process.kill()
+    }
+
+    /// Write a buffer into the input of this process, returning how many bytes were written.
+    ///
+    /// See [`BufWriter::write`] for more info.
+    pub fn write(&mut self, buf: &[u8]) -> Result<usize, io::Error> {
+        self.stdin_writer.write(buf)
+    }
+
+    /// Attempts to write an entire buffer into the input of this process.
+    ///
+    /// See [`BufWriter::write_all`] for more info.
+    pub fn write_all(&mut self, buf: &[u8]) -> Result<(), io::Error> {
+        self.stdin_writer.write_all(buf)
+    }
+
+    /// Flush the input of this process, ensuring that all intermediately buffered contents reach their destination.
+    pub fn flush(&mut self) -> Result<(), io::Error> {
+        self.stdin_writer.flush()
+    }
+
+    /// Attempt to write the given string into the input of this process.
+    pub fn print(&mut self, input: &str) -> Result<(), io::Error> {
+        self.write_all(input.as_bytes())?;
+        self.flush()
+    }
+
+    /// Attempt to write the given string, terminated by a new line, into the input of this process.
+    pub fn println(&mut self, input: &str) -> Result<(), io::Error> {
+        self.write_all(input.as_bytes())?;
+        self.write_all(b"\n")?;
+        self.flush()
     }
 }
 
@@ -161,12 +196,15 @@ fn handle_completed_process(
 }
 
 fn spawn_process(command: &mut Command) -> io::Result<Process> {
-    // Configure the stdout to be able to read the output
+    // Configure the stdio to be able to read the output and send input
     command.stdout(Stdio::piped());
+    command.stdin(Stdio::piped());
 
     // Start running the process
     let mut process = command.spawn()?;
     let stdout = process.stdout.take().unwrap();
+    let stdin = process.stdin.take().unwrap();
+    let stdin_writer = BufWriter::new(stdin);
     let pid = process.id();
 
     info!("Spawned command with pid {pid}: {command:?}");
@@ -199,5 +237,6 @@ fn spawn_process(command: &mut Command) -> io::Result<Process> {
         process,
         output_buffer,
         reader_task,
+        stdin_writer,
     })
 }
