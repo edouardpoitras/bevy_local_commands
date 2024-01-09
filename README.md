@@ -21,23 +21,21 @@ Bevy plugin that exposes events that can be used to execute simple shell command
 **Run shell commands:**
 
 ```rust
-fn run_command(
-    mut shell_commands: EventWriter<RunProcess>,
-) {
-    shell_commands.send(RunProcess::new("bash", vec!["-c", "sleep 1 && echo slept"]));
+fn run_command(mut commands: Commands) {
+    let mut cmd = std::process::Command::new("bash");
+    cmd.args(["-c", "sleep 1 && echo slept"]);
+
+    commands.spawn(LocalCommand::new(cmd));
 }
 ```
 
 **See commands started and kill running commands:**
 
 ```rust
-fn kill_started_command(
-    mut process_started: EventReader<ProcessStarted>,
-    mut kill_process: EventWriter<KillProcess>,
-) {
-    if let (Some(process_started)) = process_started.iter().last() {
-        warn!("Sending kill command for {}", process_started.pid);
-        kill_process.send(KillProcess(process_started.pid));
+fn kill_started_command(mut active_processes: Query<&mut Process>) {
+    for mut process in active_processes.iter_mut() {
+        warn!("Killing process {}", process.id());
+        process.kill().unwrap();
     }
 }
 ```
@@ -46,8 +44,9 @@ fn kill_started_command(
 
 ```rust
 fn get_command_output(mut process_output_event: EventReader<ProcessOutput>) {
-    for output in process_output_event.iter() {
-        info!("Command PID: {}", output.pid);
+    for output in process_output_event.read() {
+        info!("Output for command {:?}", output.entity);
+
         for line in output.output.iter() {
             info!("Line Output: {}", line);
         }
@@ -58,9 +57,9 @@ fn get_command_output(mut process_output_event: EventReader<ProcessOutput>) {
 **See commands completed:**
 
 ```rust
-fn get_completed(mut process_completed: EventReader<ProcessCompleted>) {
-    for completed in process_completed.iter() {
-        info!("Command completed (PID - {}, Success - {}): {}", completed.pid, completed.success, completed.command);
+fn get_completed(mut process_completed_event: EventReader<ProcessCompleted>) {
+    for completed in process_completed_event.read() {
+        info!("Command completed (Entity - {}, Success - {})", completed.entity, completed.success);
     }
 }
 ```
@@ -69,10 +68,9 @@ fn get_completed(mut process_completed: EventReader<ProcessCompleted>) {
 
 - [ ] Mac testing (not sure if it works yet)
 
-
 ## Bevy Compatilibity
 
-|bevy|bevy_local_commands|
-|---|---|
-|0.12|0.2|
-|0.11|0.1|
+| bevy | bevy_local_commands |
+| ---- | ------------------- |
+| 0.12 | 0.2                 |
+| 0.11 | 0.1                 |

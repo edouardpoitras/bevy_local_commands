@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_local_commands::{BevyLocalCommandsPlugin, ProcessCompleted, ProcessOutput, RunProcess};
+use bevy_local_commands::{BevyLocalCommandsPlugin, LocalCommand, ProcessCompleted, ProcessOutput};
 
 fn main() {
     App::new()
@@ -9,37 +9,38 @@ fn main() {
         .run();
 }
 
-fn startup(mut shell_commands: EventWriter<RunProcess>) {
-    if cfg!(windows) {
-        shell_commands.send(RunProcess::new(
-            "cmd",
-            vec!["/C", "echo Sleeping for 1s && timeout 1 && echo Done"],
-        ));
-    } else if cfg!(unix) {
-        shell_commands.send(RunProcess::new(
-            "sh",
-            vec!["-c", "echo Sleeping for 1s && sleep 1 && echo Done"],
-        ));
-    } else {
-        println!("Could not choose appropriate command to run on current platform");
-        std::process::exit(0);
-    }
+fn startup(mut commands: Commands) {
+    // Choose the command based on the OS
+    #[cfg(not(windows))]
+    let cmd = {
+        let mut cmd = std::process::Command::new("sh");
+        cmd.args(["-c", "echo Sleeping for 1s && sleep 1 && echo Done"]);
+        cmd
+    };
+    #[cfg(windows)]
+    let cmd = {
+        let mut cmd = std::process::Command::new("cmd");
+        cmd.args(["/C", "echo Sleeping for 1s && timeout 1 && echo Done"]);
+        cmd
+    };
+
+    let id = commands.spawn(LocalCommand::new(cmd)).id();
+    println!("Spawned the command as entity {id:?}");
 }
 
 fn update(
     mut process_output_event: EventReader<ProcessOutput>,
     mut process_completed_event: EventReader<ProcessCompleted>,
 ) {
-    for command_output in process_output_event.read() {
-        for line in command_output.output.iter() {
-            println!("Output Line ({}): {line}", command_output.pid);
+    for process_output in process_output_event.read() {
+        for line in process_output.output.iter() {
+            println!("Output Line ({:?}): {line}", process_output.entity);
         }
     }
-    if !process_completed_event.is_empty() {
-        let completed = process_completed_event.read().last().unwrap();
+    if let Some(process_completed) = process_completed_event.read().last() {
         println!(
-            "Command completed (PID - {}, Success - {}): {}",
-            completed.pid, completed.success, completed.command
+            "Command {:?} completed (Success - {})",
+            process_completed.entity, process_completed.success
         );
         // Quit the app
         std::process::exit(0);

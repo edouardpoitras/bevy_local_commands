@@ -1,9 +1,8 @@
-use std::time::Duration;
+use std::{process::Command, time::Duration};
 
 use bevy::{prelude::*, time::common_conditions::on_timer};
 use bevy_local_commands::{
-    ActiveProcessMap, BevyLocalCommandsPlugin, KillProcess, ProcessCompleted, ProcessOutput,
-    RunProcess,
+    BevyLocalCommandsPlugin, LocalCommand, Process, ProcessCompleted, ProcessOutput,
 };
 
 fn main() {
@@ -16,27 +15,32 @@ fn main() {
         .run();
 }
 
-fn startup(mut shell_commands: EventWriter<RunProcess>) {
-    if cfg!(windows) {
-        shell_commands.send(RunProcess::new(
-            "cmd",
-            vec!["/C", "echo Sleeping for 4s && timeout 4 && echo This should not print or execute && timeout 100"],
-        ));
-    } else if cfg!(unix) {
-        shell_commands.send(RunProcess::new(
-            "sh",
-            vec!["-c", "echo Sleeping for 4s && sleep 4 && echo This should not print or execute && sleep 100"],
-        ));
-    } else {
-        println!("Could not choose appropriate command to run on current platform");
-        std::process::exit(0);
-    }
+fn startup(mut commands: Commands) {
+    // Choose the command based on the OS
+    #[cfg(not(windows))]
+    let cmd = {
+        let mut cmd = Command::new("sh");
+        cmd.args([
+            "-c",
+            "echo Sleeping for 4s && sleep 4 && echo This should not print or execute && sleep 100",
+        ]);
+        cmd
+    };
+    #[cfg(windows)]
+    let cmd = {
+        let mut cmd = Command::new("cmd");
+        cmd.args(["/C", "echo Sleeping for 4s && timeout 4 && echo This should not print or execute && timeout 100"]);
+        cmd
+    };
+
+    let id = commands.spawn(LocalCommand::new(cmd)).id();
+    println!("Spawned the command as entity {id:?}")
 }
 
-fn kill(active_processes: Res<ActiveProcessMap>, mut kill_process_event: EventWriter<KillProcess>) {
-    for &pid in active_processes.0.keys() {
-        println!("Killing {pid}");
-        kill_process_event.send(KillProcess(pid));
+fn kill(mut active_processes: Query<(Entity, &mut Process)>) {
+    for (entity, mut process) in active_processes.iter_mut() {
+        println!("Killing {entity:?}");
+        process.kill().unwrap();
     }
 }
 
@@ -44,16 +48,15 @@ fn update(
     mut process_output_event: EventReader<ProcessOutput>,
     mut process_completed_event: EventReader<ProcessCompleted>,
 ) {
-    for command_output in process_output_event.read() {
-        for line in command_output.output.iter() {
-            println!("Output Line ({}): {line}", command_output.pid);
+    for process_output in process_output_event.read() {
+        for line in process_output.output.iter() {
+            println!("Output Line ({:?}): {line}", process_output.entity);
         }
     }
-    if !process_completed_event.is_empty() {
-        let completed = process_completed_event.read().last().unwrap();
+    if let Some(completed) = process_completed_event.read().last() {
         println!(
-            "Command completed (PID - {}, Success - {}): {}",
-            completed.pid, completed.success, completed.command
+            "Command {:?} completed (Success - {})",
+            completed.entity, completed.success
         );
         // Quit the app
         std::process::exit(0);
