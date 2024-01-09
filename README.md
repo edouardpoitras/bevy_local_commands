@@ -72,5 +72,5 @@ fn get_completed(mut process_completed_event: EventReader<ProcessCompleted>) {
 
 | bevy | bevy_local_commands |
 | ---- | ------------------- |
-| 0.12 | 0.2                 |
+| 0.12 | 0.3                 |
 | 0.11 | 0.1                 |
