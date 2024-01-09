@@ -76,34 +76,50 @@ impl Process {
         self.process.kill()
     }
 
-    /// Write a buffer into the input of this process, returning how many bytes were written.
+    /// Write a string to the process stdin.
     ///
-    /// See [`BufWriter::write`] for more info.
-    pub fn write(&mut self, buf: &[u8]) -> Result<usize, io::Error> {
-        self.stdin_writer.write(buf)
-    }
-
-    /// Attempts to write an entire buffer into the input of this process.
+    /// See [`Process::println`] for a version which adds a newline (`\n`) to the end of the string.
     ///
-    /// See [`BufWriter::write_all`] for more info.
-    pub fn write_all(&mut self, buf: &[u8]) -> Result<(), io::Error> {
-        self.stdin_writer.write_all(buf)
-    }
-
-    /// Flush the input of this process, ensuring that all intermediately buffered contents reach their destination.
-    pub fn flush(&mut self) -> Result<(), io::Error> {
-        self.stdin_writer.flush()
-    }
-
-    /// Attempt to write the given string into the input of this process.
+    /// Here's how you can write "Hello world!" to a process that has just been started:
+    ///
+    /// ```
+    /// # use bevy::prelude::*;
+    /// # use bevy_local_commands::Process;
+    /// fn provide_input(mut query: Query<&mut Process, Added<Process>>) {
+    ///     for mut process in query.iter_mut() {
+    ///         process.print("Hello world!").unwrap();
+    ///     }
+    /// }
+    /// ```
+    ///
+    /// If you want more control, you can also use the `write!` macro.
+    /// Just keep in mind that this might not flush the input buffer directly,
+    /// so your process might receive the output later.
+    /// You can also manually flush the buffer when you have written all your input.
+    ///
+    /// ```
+    /// # use bevy::prelude::*;
+    /// # use bevy_local_commands::Process;
+    /// // To use the macro, we need to import `Write`
+    /// use std::io::Write;
+    ///
+    /// fn provide_input(mut query: Query<&mut Process, Added<Process>>) {
+    ///     for mut process in query.iter_mut() {
+    ///         let name = "world";
+    ///         write!(&mut process, "Hello {name}!").unwrap();
+    ///         // Make sure that the process receives the input
+    ///         process.flush().unwrap();
+    ///     }
+    /// }
+    /// ```
     pub fn print(&mut self, input: &str) -> Result<(), io::Error> {
         self.write_all(input.as_bytes())?;
         self.flush()
     }
 
-    /// Attempt to write the given string, terminated by a new line, into the input of this process.
+    /// Write a string, terminated by a newline (`\n`) to the process stdin.
     ///
-    /// # Example
+    /// See [`Process::print`] for a version without the newline.
     ///
     /// Here's how you can write "Hello world!" to a process that has just been started:
     ///
@@ -116,10 +132,45 @@ impl Process {
     ///     }
     /// }
     /// ```
+    ///
+    /// If you want more control, you can also use the `writeln!` macro.
+    /// Just keep in mind that this might not flush the input buffer directly,
+    /// so your process might receive the output later.
+    /// You can also manually flush the buffer when you have written all your input.
+    ///
+    /// ```
+    /// # use bevy::prelude::*;
+    /// # use bevy_local_commands::Process;
+    /// // To use the macro, we need to import `Write`
+    /// use std::io::Write;
+    ///
+    /// fn provide_input(mut query: Query<&mut Process, Added<Process>>) {
+    ///     for mut process in query.iter_mut() {
+    ///         let name = "world";
+    ///         writeln!(&mut process, "Hello {name}!").unwrap();
+    ///         // Make sure that the process receives the input
+    ///         process.flush().unwrap();
+    ///     }
+    /// }
+    /// ```
     pub fn println(&mut self, input: &str) -> Result<(), io::Error> {
         self.write_all(input.as_bytes())?;
         self.write_all(b"\n")?;
         self.flush()
+    }
+}
+
+impl Write for Process {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        self.stdin_writer.write(buf)
+    }
+
+    fn write_all(&mut self, buf: &[u8]) -> io::Result<()> {
+        self.stdin_writer.write_all(buf)
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        self.stdin_writer.flush()
     }
 }
 
