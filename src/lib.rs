@@ -14,12 +14,6 @@ use std::sync::Mutex;
 pub type Pid = u32;
 
 #[derive(Debug, Event)]
-pub struct ProcessStarted {
-    pub command: String,
-    pub pid: Pid,
-}
-
-#[derive(Debug, Event)]
 pub struct ProcessOutput {
     pub entity: Entity,
     pub output: Vec<String>,
@@ -78,8 +72,7 @@ pub struct BevyLocalCommandsPlugin;
 
 impl Plugin for BevyLocalCommandsPlugin {
     fn build(&self, app: &mut App) {
-        app.add_event::<ProcessStarted>()
-            .add_event::<ProcessOutput>()
+        app.add_event::<ProcessOutput>()
             .add_event::<ProcessCompleted>()
             .add_event::<ProcessError>()
             .add_systems(
