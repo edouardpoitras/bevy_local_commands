@@ -6,7 +6,7 @@
 ![MIT](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Apache](https://img.shields.io/badge/license-Apache-blue.svg)
 
-Bevy plugin that exposes events that can be used to execute simple shell commands.
+Bevy plugin to manage local shell commands.
 
 ## Usage
 
