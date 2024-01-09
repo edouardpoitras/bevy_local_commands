@@ -102,6 +102,20 @@ impl Process {
     }
 
     /// Attempt to write the given string, terminated by a new line, into the input of this process.
+    ///
+    /// # Example
+    ///
+    /// Here's how you can write "Hello world!" to a process that has just been started:
+    ///
+    /// ```
+    /// # use bevy::prelude::*;
+    /// # use bevy_local_commands::Process;
+    /// fn provide_input(mut query: Query<&mut Process, Added<Process>>) {
+    ///     for mut process in query.iter_mut() {
+    ///         process.println("Hello world!").unwrap();
+    ///     }
+    /// }
+    /// ```
     pub fn println(&mut self, input: &str) -> Result<(), io::Error> {
         self.write_all(input.as_bytes())?;
         self.write_all(b"\n")?;
