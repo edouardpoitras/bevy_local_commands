@@ -9,7 +9,7 @@ use bevy::prelude::*;
 
 #[derive(Component)]
 pub struct LocalCommand {
-    command: Command,
+    pub(crate) command: Command,
 }
 
 impl LocalCommand {
