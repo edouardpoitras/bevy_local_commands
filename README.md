@@ -54,6 +54,24 @@ fn get_command_output(mut process_output_event: EventReader<ProcessOutput>) {
 }
 ```
 
+**Send command input:**
+
+```rust
+fn send_command_input(
+    mut process_output_event: EventReader<ProcessOutput>,
+    mut active_processes: Query<&mut Process>,
+) {
+    for output in process_output_event.read() {
+        for line in output.output.iter() {
+            if line.ends_with("Prompt String: ") {
+                let mut process = active_processes.get_mut(output.entity).unwrap();
+                process.println("Text to send").expect("Failed to write to process");
+            }
+        }
+    }
+}
+```
+
 **See commands completed:**
 
 ```rust
@@ -72,5 +90,5 @@ fn get_completed(mut process_completed_event: EventReader<ProcessCompleted>) {
 
 | bevy | bevy_local_commands |
 | ---- | ------------------- |
-| 0.12 | 0.3                 |
+| 0.12 | 0.4                 |
 | 0.11 | 0.1                 |
