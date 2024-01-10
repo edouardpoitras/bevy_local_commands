@@ -1,12 +1,13 @@
 use std::{
     ffi::OsStr,
+    fmt::Debug,
     path::Path,
     process::{Command, CommandArgs, CommandEnvs},
 };
 
 use bevy::prelude::*;
 
-#[derive(Debug, Component)]
+#[derive(Component)]
 pub struct LocalCommand {
     pub command: Command,
 }
@@ -95,5 +96,11 @@ impl From<Command> for LocalCommand {
 impl From<LocalCommand> for Command {
     fn from(value: LocalCommand) -> Self {
         value.command
+    }
+}
+
+impl Debug for LocalCommand {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.command.fmt(f)
     }
 }
