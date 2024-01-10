@@ -1,4 +1,8 @@
-use std::{ffi::OsStr, process::Command};
+use std::{
+    ffi::OsStr,
+    path::Path,
+    process::{Command, CommandArgs, CommandEnvs},
+};
 
 use bevy::prelude::*;
 
@@ -60,8 +64,24 @@ impl LocalCommand {
         self
     }
 
-    pub fn current_dir<P: AsRef<std::path::Path>>(mut self, dir: P) -> Self {
+    pub fn current_dir<P: AsRef<Path>>(mut self, dir: P) -> Self {
         self.command.current_dir(dir);
         self
+    }
+
+    pub fn get_program(&self) -> &OsStr {
+        self.command.get_program()
+    }
+
+    pub fn get_args(&self) -> CommandArgs<'_> {
+        self.command.get_args()
+    }
+
+    pub fn get_envs(&self) -> CommandEnvs<'_> {
+        self.command.get_envs()
+    }
+
+    pub fn get_current_dir(&self) -> Option<&Path> {
+        self.command.get_current_dir()
     }
 }
