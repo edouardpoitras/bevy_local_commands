@@ -85,3 +85,15 @@ impl LocalCommand {
         self.command.get_current_dir()
     }
 }
+
+impl From<Command> for LocalCommand {
+    fn from(command: Command) -> Self {
+        Self { command }
+    }
+}
+
+impl From<LocalCommand> for Command {
+    fn from(value: LocalCommand) -> Self {
+        value.command
+    }
+}
