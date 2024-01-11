@@ -12,12 +12,9 @@ fn main() {
 }
 
 fn startup(mut commands: Commands) {
-    let cmd = {
-        let mut cmd = std::process::Command::new("sh");
-        cmd.args(["-c", "echo 'Enter Name: ' && read NAME && echo Hello $NAME"]);
-        cmd
-    };
-    let id = commands.spawn(LocalCommand::new(cmd)).id();
+    let cmd = LocalCommand::new("sh")
+        .args(["-c", "echo 'Enter Name: ' && read NAME && echo Hello $NAME"]);
+    let id = commands.spawn(cmd).id();
     println!("Spawned the command as entity {id:?}");
 }
 

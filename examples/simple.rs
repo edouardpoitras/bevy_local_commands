@@ -12,19 +12,12 @@ fn main() {
 fn startup(mut commands: Commands) {
     // Choose the command based on the OS
     #[cfg(not(windows))]
-    let cmd = {
-        let mut cmd = std::process::Command::new("sh");
-        cmd.args(["-c", "echo Sleeping for 1s && sleep 1 && echo Done"]);
-        cmd
-    };
+    let cmd = LocalCommand::new("sh").args(["-c", "echo Sleeping for 1s && sleep 1 && echo Done"]);
     #[cfg(windows)]
-    let cmd = {
-        let mut cmd = std::process::Command::new("cmd");
-        cmd.args(["/C", "echo Sleeping for 1s && timeout 1 && echo Done"]);
-        cmd
-    };
+    let cmd =
+        LocalCommand::new("cmd").args(["/C", "echo Sleeping for 1s && timeout 1 && echo Done"]);
 
-    let id = commands.spawn(LocalCommand::new(cmd)).id();
+    let id = commands.spawn(cmd).id();
     println!("Spawned the command as entity {id:?}");
 }
 

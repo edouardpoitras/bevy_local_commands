@@ -12,6 +12,9 @@ use std::process::Stdio;
 use std::sync::Arc;
 use std::sync::Mutex;
 
+mod local_command;
+pub use local_command::LocalCommand;
+
 /// The ID of a process.
 pub type Pid = u32;
 
@@ -41,17 +44,6 @@ pub struct ProcessCompleted {
 /// The lines written to the standard output by a given process.
 #[derive(Debug, Default, Clone)]
 struct ProcessOutputBuffer(Arc<Mutex<Vec<String>>>);
-
-#[derive(Debug, Component)]
-pub struct LocalCommand {
-    pub command: Command,
-}
-
-impl LocalCommand {
-    pub fn new(command: Command) -> Self {
-        Self { command }
-    }
-}
 
 #[derive(Debug, Component)]
 pub struct Process {

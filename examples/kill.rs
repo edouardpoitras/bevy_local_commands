@@ -1,4 +1,4 @@
-use std::{process::Command, time::Duration};
+use std::time::Duration;
 
 use bevy::{prelude::*, time::common_conditions::on_timer};
 use bevy_local_commands::{
@@ -18,22 +18,17 @@ fn main() {
 fn startup(mut commands: Commands) {
     // Choose the command based on the OS
     #[cfg(not(windows))]
-    let cmd = {
-        let mut cmd = Command::new("sh");
-        cmd.args([
-            "-c",
-            "echo Sleeping for 4s && sleep 4 && echo This should not print or execute && sleep 100",
-        ]);
-        cmd
-    };
+    let cmd = LocalCommand::new("sh").args([
+        "-c",
+        "echo Sleeping for 4s && sleep 4 && echo This should not print or execute && sleep 100",
+    ]);
     #[cfg(windows)]
-    let cmd = {
-        let mut cmd = Command::new("cmd");
-        cmd.args(["/C", "echo Sleeping for 4s && timeout 4 && echo This should not print or execute && timeout 100"]);
-        cmd
-    };
+    let cmd = LocalCommand::new("cmd").args([
+        "/C",
+        "echo Sleeping for 4s && timeout 4 && echo This should not print or execute && timeout 100",
+    ]);
 
-    let id = commands.spawn(LocalCommand::new(cmd)).id();
+    let id = commands.spawn(cmd).id();
     println!("Spawned the command as entity {id:?}")
 }
 

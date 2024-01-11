@@ -22,10 +22,7 @@ Bevy plugin to manage local shell commands.
 
 ```rust
 fn run_command(mut commands: Commands) {
-    let mut cmd = std::process::Command::new("bash");
-    cmd.args(["-c", "sleep 1 && echo slept"]);
-
-    commands.spawn(LocalCommand::new(cmd));
+    commands.spawn(LocalCommand::new("bash").args(["-c", "sleep 1 && echo slept"]));
 }
 ```
 

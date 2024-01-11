@@ -1,5 +1,3 @@
-use std::process::Command;
-
 use bevy::prelude::*;
 use bevy_local_commands::{BevyLocalCommandsPlugin, LocalCommand, ProcessError};
 
@@ -12,7 +10,7 @@ fn main() {
 }
 
 fn startup(mut commands: Commands) {
-    commands.spawn(LocalCommand::new(Command::new("commandthatdoesnotexist")));
+    commands.spawn(LocalCommand::new("commandthatdoesnotexist"));
 }
 
 fn update(mut process_error: EventReader<ProcessError>) {
