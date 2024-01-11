@@ -77,7 +77,11 @@ fn send_command_input(
 ```rust
 fn get_completed(mut process_completed_event: EventReader<ProcessCompleted>) {
     for completed in process_completed_event.read() {
-        info!("Command completed (Entity - {}, Success - {})", completed.entity, completed.success);
+        info!(
+            "Command completed (Entity - {}, Success - {})",
+            completed.entity,
+            completed.exit_status.success()
+        );
     }
 }
 ```
