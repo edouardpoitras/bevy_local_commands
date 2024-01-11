@@ -8,6 +8,7 @@ use std::io::BufWriter;
 use std::process::Child;
 use std::process::ChildStdin;
 use std::process::Command;
+use std::process::ExitStatus;
 use std::process::Stdio;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -35,7 +36,7 @@ pub struct ProcessError {
 #[derive(Debug, Event)]
 pub struct ProcessCompleted {
     pub entity: Entity,
-    pub success: bool,
+    pub exit_status: ExitStatus,
 }
 
 /// The lines written to the standard output by a given process.
@@ -242,7 +243,7 @@ fn handle_completed_process(
 
             process_completed_event.send(ProcessCompleted {
                 entity,
-                success: exit_status.success(),
+                exit_status,
             });
 
             // The process is finished, despawn the entity
