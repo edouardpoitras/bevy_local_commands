@@ -51,7 +51,8 @@ fn update(
     if let Some(completed) = process_completed_event.read().last() {
         println!(
             "Command {:?} completed (Success - {})",
-            completed.entity, completed.success
+            completed.entity,
+            completed.exit_status.success()
         );
         // Quit the app
         std::process::exit(0);
