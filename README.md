@@ -44,7 +44,7 @@ fn get_command_output(mut process_output_event: EventReader<ProcessOutput>) {
     for output in process_output_event.read() {
         info!("Output for command {:?}", output.entity);
 
-        for line in output.output.iter() {
+        for line in output.lines() {
             info!("Line Output: {}", line);
         }
     }
