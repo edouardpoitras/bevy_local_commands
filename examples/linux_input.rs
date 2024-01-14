@@ -24,7 +24,7 @@ fn update(
     mut active_processes: Query<&mut Process>,
 ) {
     for process_output in process_output_event.read() {
-        for line in process_output.output.iter() {
+        for line in process_output.lines() {
             println!("Output Line ({:?}): {line}", process_output.entity);
             if line.ends_with(": ") {
                 let mut process = active_processes.get_mut(process_output.entity).unwrap();

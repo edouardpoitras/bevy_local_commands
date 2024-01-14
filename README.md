@@ -59,7 +59,7 @@ fn send_command_input(
     mut active_processes: Query<&mut Process>,
 ) {
     for output in process_output_event.read() {
-        for line in output.output.iter() {
+        for line in output.lines() {
             if line.ends_with("Prompt String: ") {
                 let mut process = active_processes.get_mut(output.entity).unwrap();
                 process.println("Text to send").expect("Failed to write to process");
