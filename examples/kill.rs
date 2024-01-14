@@ -44,7 +44,7 @@ fn update(
     mut process_completed_event: EventReader<ProcessCompleted>,
 ) {
     for process_output in process_output_event.read() {
-        for line in process_output.output.iter() {
+        for line in process_output.lines() {
             println!("Output Line ({:?}): {line}", process_output.entity);
         }
     }
