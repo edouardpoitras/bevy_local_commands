@@ -92,7 +92,7 @@ fn cleanup_on_completion(mut commands: Commands) {
         Cleanup::DespawnEntity
     ));
 }
-
+```
 
 ## Todo
 
