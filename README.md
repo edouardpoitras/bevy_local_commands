@@ -83,6 +83,17 @@ fn get_completed(mut process_completed_event: EventReader<ProcessCompleted>) {
 }
 ```
 
+**Customize commands behaviour:**
+```rust
+fn cleanup_on_completion(mut commands: Commands) {
+    commands.spawn((
+        LocalCommand::new("bash").args(["-c", "sleep 1 && echo slept"]),
+        // Also, Cleanup::RemoveComponent to remove Process and Cleanup components upon completion.
+        Cleanup::DespawnEntity
+    ));
+}
+
+
 ## Todo
 
 - [ ] Mac testing (not sure if it works yet)
