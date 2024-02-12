@@ -5,10 +5,12 @@ use std::sync::Mutex;
 
 use bevy::prelude::*;
 
+mod addons;
 mod local_command;
 mod process;
 mod systems;
 
+pub use addons::cleanup::Cleanup;
 pub use local_command::LocalCommand;
 pub use process::Process;
 
@@ -72,6 +74,7 @@ impl Plugin for BevyLocalCommandsPlugin {
                     systems::handle_new_command,
                     systems::handle_process_output,
                     systems::handle_completed_process,
+                    addons::cleanup::cleanup_completed_process,
                 )
                     .chain(),
             );

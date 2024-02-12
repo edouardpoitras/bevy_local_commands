@@ -51,9 +51,8 @@ pub(crate) fn handle_process_output(
 
 /// Periodically check if any of the processes have finished.
 ///
-/// For the completed processes, a [`ProcessCompleted`] event is produced and the entities despawned.
+/// For the completed processes, a [`ProcessCompleted`] event is produced.
 pub(crate) fn handle_completed_process(
-    mut commands: Commands,
     mut query: Query<(Entity, &mut Process)>,
     mut process_completed_event: EventWriter<ProcessCompleted>,
 ) {
@@ -65,11 +64,6 @@ pub(crate) fn handle_completed_process(
                 entity,
                 exit_status,
             });
-
-            // The process is finished, despawn the entity
-            if let Some(mut entity_cmd) = commands.get_entity(entity) {
-                entity_cmd.despawn()
-            }
         }
     }
 }
