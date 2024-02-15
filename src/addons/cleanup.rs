@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{Process, ProcessCompleted};
+use crate::{LocalCommand, Process, ProcessCompleted};
 
 #[derive(Debug, Component)]
 pub enum Cleanup {
@@ -31,7 +31,7 @@ pub(crate) fn cleanup_completed_process(
                     if let Some(mut entity_commands) =
                         commands.get_entity(process_completed_event.entity)
                     {
-                        entity_commands.remove::<(Process, Cleanup)>();
+                        entity_commands.remove::<(Process, Cleanup, LocalCommand)>();
                     }
                 },
                 Cleanup::None => {},
