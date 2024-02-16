@@ -10,7 +10,7 @@ mod local_command;
 mod process;
 mod systems;
 
-pub use addons::cleanup::Cleanup;
+pub use addons::{cleanup::Cleanup, delay::Delay};
 pub use local_command::LocalCommand;
 pub use process::Process;
 
@@ -72,9 +72,11 @@ impl Plugin for BevyLocalCommandsPlugin {
                 Update,
                 (
                     systems::handle_new_command,
+                    systems::handle_delayed_command,
                     systems::handle_process_output,
                     systems::handle_completed_process,
                     addons::cleanup::cleanup_completed_process,
+                    addons::delay::handle_new_delayed_command,
                 )
                     .chain(),
             );

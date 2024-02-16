@@ -18,7 +18,7 @@ impl LocalCommand {
         S: AsRef<OsStr>,
     {
         Self {
-            command: Command::new(program),
+            command: Command::new(program)
         }
     }
 

@@ -24,6 +24,14 @@ Bevy plugin to manage local shell commands.
 fn run_command(mut commands: Commands) {
     commands.spawn(LocalCommand::new("bash").args(["-c", "sleep 1 && echo slept"]));
 }
+
+fn run_command_in_5s(mut commands: Commands) {
+    let delayed_command = DelayedLocalCommand {
+        local_command: LocalCommand::new("bash").args(["-c", "sleep 1 && echo slept"]),
+        delay: Timer::from_seconds(5.0, TimerMode::Once),
+    };
+    commands.spawn(delayed_command);
+}
 ```
 
 **See commands started and kill running commands:**

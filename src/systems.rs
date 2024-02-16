@@ -3,30 +3,38 @@ use std::process::{Command, Stdio};
 
 use bevy::{prelude::*, tasks::IoTaskPool};
 
+use crate::addons::delay::Delay;
 use crate::{
-    LocalCommand, Process, ProcessCompleted, ProcessError, ProcessErrorInfo, ProcessOutput,
-    ProcessOutputBuffer,
+    LocalCommand, Process, ProcessCompleted, ProcessError, ProcessErrorInfo, ProcessOutput, ProcessOutputBuffer
 };
 
 /// A new command has been added.
 ///
-/// This system will spawn the corresponding process and track the process output.
+/// This system will handle spawn processes and setup process output tracking.
 pub(crate) fn handle_new_command(
     mut commands: Commands,
-    mut query: Query<(Entity, &mut LocalCommand), (Added<LocalCommand>, Without<Process>)>,
+    mut added_query: Query<(Entity, &mut LocalCommand), (Added<LocalCommand>, Without<Process>, Without<Delay>)>,
     mut process_error_event: EventWriter<ProcessError>,
 ) {
-    for (entity, mut local_command) in query.iter_mut() {
-        match spawn_process(&mut local_command.command) {
-            Ok(process) => {
-                commands.entity(entity).insert(process);
-            },
-            Err(_) => {
-                process_error_event.send(ProcessError {
-                    entity,
-                    info: ProcessErrorInfo::FailedToStart,
-                });
-            },
+    // Spawn process for recently added LocalCommands.
+    for (entity, mut local_command) in added_query.iter_mut() {
+        spawn_process_and_handle_error(&mut commands, entity, &mut local_command, &mut process_error_event);
+    }
+}
+
+/// A delayed command is ready to spawn.
+///
+/// This system will handle spawning previously delayed processes and setup process output tracking.
+pub(crate) fn handle_delayed_command(
+    mut commands: Commands,
+    mut query: Query<&mut LocalCommand>,
+    mut delayed_entities: RemovedComponents<Delay>,
+    mut process_error_event: EventWriter<ProcessError>,
+) {
+    // Spawn process for previous delayed LocalCommands.
+    for entity in delayed_entities.read() {
+        if let Ok(mut local_command) = query.get_mut(entity) {
+            spawn_process_and_handle_error(&mut commands, entity, &mut local_command, &mut process_error_event);
         }
     }
 }
@@ -68,7 +76,26 @@ pub(crate) fn handle_completed_process(
     }
 }
 
-pub(crate) fn spawn_process(command: &mut Command) -> io::Result<Process> {
+fn spawn_process_and_handle_error(
+    commands: &mut Commands,
+    entity: Entity,
+    local_command: &mut LocalCommand,
+    process_error_event: &mut EventWriter<ProcessError>
+) {
+    match spawn_process(&mut local_command.command) {
+        Ok(process) => {
+            commands.entity(entity).insert(process);
+        },
+        Err(_) => {
+            process_error_event.send(ProcessError {
+                entity: entity,
+                info: ProcessErrorInfo::FailedToStart,
+            });
+        },
+    }
+}
+
+fn spawn_process(command: &mut Command) -> io::Result<Process> {
     // Configure the stdio to be able to read the output and send input
     command.stdout(Stdio::piped());
     command.stdin(Stdio::piped());
