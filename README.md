@@ -83,7 +83,7 @@ fn get_completed(mut process_completed_event: EventReader<ProcessCompleted>) {
 }
 ```
 
-**Customize commands behaviour:**
+**Customize process behavior:**
 ```rust
 fn cleanup_on_completion(mut commands: Commands) {
     commands.spawn((
@@ -92,7 +92,17 @@ fn cleanup_on_completion(mut commands: Commands) {
         Cleanup::DespawnEntity
     ));
 }
+
+fn retry_command(mut commands: Commands) {
+    commands.spawn((
+        LocalCommand::new("bash").args(["-c", "command --that=fails"]),
+        // Attempt the command 3 times before giving up.
+        Retry::Attempts(3)
+    ));
+}
 ```
+
+NOTE: Cleanup and Retry components are not currently compatible - adding both results in undefined behavior.
 
 ## Todo
 
