@@ -83,26 +83,21 @@ fn get_completed(mut process_completed_event: EventReader<ProcessCompleted>) {
 }
 ```
 
-**Customize process behavior:**
+**Retry and cleanup behavior:**
+
 ```rust
-fn cleanup_on_completion(mut commands: Commands) {
+fn retries_and_cleanup_on_completion(mut commands: Commands) {
     commands.spawn((
-        LocalCommand::new("bash").args(["-c", "sleep 1 && echo slept"]),
-        // Also, Cleanup::RemoveComponent to remove Process and Cleanup components upon completion.
+        LocalCommand::new("bash").args(["-c", "sleep 1 && invalid-command --that=fails"]),
+        // Attempt the command 3 times before giving up
+        // NOTE: The Retry component will be removed from the entity when no retries are left
+        Retry::Attempts(3)
+        // Cleanup::DespawnEntity will despawn the entity upon process completion.
+        // Cleanup::RemoveComponents will remove this crate's components upon process completion.
         Cleanup::DespawnEntity
     ));
 }
-
-fn retry_command(mut commands: Commands) {
-    commands.spawn((
-        LocalCommand::new("bash").args(["-c", "command --that=fails"]),
-        // Attempt the command 3 times before giving up.
-        Retry::Attempts(3)
-    ));
-}
 ```
-
-NOTE: Cleanup and Retry components are not currently compatible - adding both results in undefined behavior.
 
 ## Todo
 

@@ -4,13 +4,13 @@ use crate::{LocalCommand, Process, ProcessCompleted};
 
 #[derive(Debug, Component)]
 pub enum Retry {
-    None,
     Attempts(usize),
 }
 
 /// Retry failed processes according to the Retry component.
 ///
-/// Processes without the Retry component are ignored, same as Retry::None.
+/// Processes without the Retry component are ignored.
+/// The Retry component is removed from the entity when retries are done.
 pub(crate) fn retry_failed_process(
     mut commands: Commands,
     query: Query<(&LocalCommand, &Retry)>,
@@ -23,12 +23,15 @@ pub(crate) fn retry_failed_process(
         if let Ok((current_local_command, retry)) = query.get(process_completed_event.entity) {
             match retry {
                 Retry::Attempts(retries) => {
-                    if *retries < 1 {
-                        continue;
-                    }
                     if let Some(mut entity_commands) =
                         commands.get_entity(process_completed_event.entity)
                     {
+                        // Remove Retry component and skip if no more retries left
+                        if *retries < 1 {
+                            entity_commands.remove::<Retry>();
+                            continue;
+                        }
+
                         // Remove both the Process and LocalCommand
                         entity_commands.remove::<(Process, LocalCommand)>();
 
@@ -59,7 +62,6 @@ pub(crate) fn retry_failed_process(
                         entity_commands.insert((new_local_command, Retry::Attempts(retries - 1)));
                     }
                 },
-                Retry::None => {},
             }
         }
     }
