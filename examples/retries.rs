@@ -1,5 +1,7 @@
 use bevy::prelude::*;
-use bevy_local_commands::{BevyLocalCommandsPlugin, LocalCommand, ProcessCompleted, Retry};
+use bevy_local_commands::{
+    BevyLocalCommandsPlugin, LocalCommand, ProcessCompleted, Retry, RetryEvent,
+};
 
 fn main() {
     App::new()
@@ -26,20 +28,23 @@ fn startup(mut commands: Commands) {
 
 fn update(
     mut process_completed_event: EventReader<ProcessCompleted>,
-    query: Query<(&LocalCommand, &Retry)>,
+    query: Query<&LocalCommand, With<Retry>>,
+    mut retry_events: EventReader<RetryEvent>,
 ) {
     if let Some(process_completed) = process_completed_event.read().last() {
-        let (local_command, retry) = query.get(process_completed.entity).unwrap();
-        println!(
-            "Command {:?} {:?} completed (Success - {})",
-            local_command.get_program(),
-            local_command.get_args(),
-            process_completed.exit_status.success()
-        );
-        println!("Retries remaining: {:?}", retry);
-        if let Retry::Attempts(0) = retry {
-            println!("No retries left, exiting");
+        if let Ok(local_command) = query.get(process_completed.entity) {
+            println!(
+                "Command {:?} {:?} completed (Success - {})",
+                local_command.get_program(),
+                local_command.get_args(),
+                process_completed.exit_status.success()
+            );
+        } else {
+            println!("Retry component removed from entity, exiting");
             std::process::exit(0);
         }
+    }
+    for retry_event in retry_events.read() {
+        println!("Retry event triggered: {:?}", retry_event);
     }
 }

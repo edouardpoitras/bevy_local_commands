@@ -1,10 +1,16 @@
 use bevy::prelude::*;
 
-use crate::{LocalCommand, Process, ProcessCompleted};
+use crate::{systems::spawn_process, LocalCommand, Process, ProcessCompleted};
 
 #[derive(Debug, Component)]
 pub enum Retry {
     Attempts(usize),
+}
+
+#[derive(Debug, Event)]
+pub struct RetryEvent {
+    pub entity: Entity,
+    pub retries_left: usize,
 }
 
 /// Retry failed processes according to the Retry component.
@@ -13,53 +19,46 @@ pub enum Retry {
 /// The Retry component is removed from the entity when retries are done.
 pub(crate) fn retry_failed_process(
     mut commands: Commands,
-    query: Query<(&LocalCommand, &Retry)>,
+    mut query: Query<(&mut LocalCommand, &mut Process, &mut Retry)>,
+    mut retry_events: EventWriter<RetryEvent>,
     mut process_completed_events: EventReader<ProcessCompleted>,
 ) {
     for process_completed_event in process_completed_events.read() {
         if process_completed_event.exit_status.success() {
             continue;
         }
-        if let Ok((current_local_command, retry)) = query.get(process_completed_event.entity) {
-            match retry {
+        if let Ok((mut local_command, mut process, mut retry)) =
+            query.get_mut(process_completed_event.entity)
+        {
+            match &mut *retry {
                 Retry::Attempts(retries) => {
                     if let Some(mut entity_commands) =
                         commands.get_entity(process_completed_event.entity)
                     {
-                        // Remove Retry component and skip if no more retries left
                         if *retries < 1 {
                             entity_commands.remove::<Retry>();
                             continue;
                         }
+                        // Update the retry attempts
+                        *retries -= 1;
 
-                        // Remove both the Process and LocalCommand
-                        entity_commands.remove::<(Process, LocalCommand)>();
-
-                        // Create new LocalCommand
-                        let mut new_local_command =
-                            LocalCommand::new(current_local_command.get_program());
-
-                        // Match current working directory
-                        new_local_command.command.current_dir(
-                            current_local_command
-                                .get_current_dir()
-                                .unwrap_or(std::path::Path::new(".")),
-                        );
-
-                        // Match arguments
-                        new_local_command
-                            .command
-                            .args(current_local_command.get_args());
-
-                        // Match environment variables
-                        for (key, option_value) in current_local_command.get_envs() {
-                            if let Some(value) = option_value {
-                                new_local_command.command.env(key, value);
-                            }
+                        // Spawn the process once again
+                        match spawn_process(&mut local_command.command) {
+                            Ok(new_process) => {
+                                *process = new_process;
+                                retry_events.send(RetryEvent {
+                                    entity: process_completed_event.entity,
+                                    retries_left: *retries,
+                                });
+                            },
+                            Err(_) => {
+                                error!(
+                                    "Failed to retry process: {:?} {:?}",
+                                    local_command.get_program(),
+                                    local_command.get_args()
+                                );
+                            },
                         }
-
-                        // Re-add the LocalCommand to trigger Added<LocalCommand> event for Process creation
-                        entity_commands.insert((new_local_command, Retry::Attempts(retries - 1)));
                     }
                 },
             }

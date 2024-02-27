@@ -26,7 +26,7 @@ fn startup(mut commands: Commands) {
 
 fn update(
     mut process_completed_event: EventReader<ProcessCompleted>,
-    query: Query<(&LocalCommand, &Retry)>,
+    query: Query<(&LocalCommand, &Retry)>, // We could also listen for RetryEvent to get retry status
 ) {
     if let Some(process_completed) = process_completed_event.read().last() {
         if let Ok((local_command, retry)) = query.get(process_completed.entity) {
