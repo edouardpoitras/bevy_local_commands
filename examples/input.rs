@@ -12,8 +12,13 @@ fn main() {
 }
 
 fn startup(mut commands: Commands) {
-    let cmd = LocalCommand::new("sh")
-        .args(["-c", "echo 'Enter Name: ' && read NAME && echo Hello $NAME"]);
+    // Choose the command based on the OS
+    #[cfg(not(windows))]
+    let cmd =
+        LocalCommand::new("sh").args(["-c", "echo 'Enter Name:' && read NAME && echo Hello $NAME"]);
+    #[cfg(windows)]
+    let cmd = LocalCommand::new("powershell")
+        .args(["$name = Read-Host 'Enter Name'; echo \"Name Entered: $name\""]);
     let id = commands.spawn(cmd).id();
     println!("Spawned the command as entity {id:?}");
 }
@@ -25,12 +30,11 @@ fn update(
 ) {
     for process_output in process_output_event.read() {
         for line in process_output.lines() {
-            println!("Output Line ({:?}): {line}", process_output.entity);
-            if line.ends_with(": ") {
-                let mut process = active_processes.get_mut(process_output.entity).unwrap();
-                process.println("Bevy").expect("Failed to write to process");
-            }
+            println!("{line}");
         }
+    }
+    if let Ok(mut process) = active_processes.get_single_mut() {
+        process.println("Bevy").unwrap_or_default();
     }
     if let Some(process_completed) = process_completed_event.read().last() {
         println!(
