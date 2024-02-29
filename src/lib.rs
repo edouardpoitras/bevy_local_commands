@@ -11,6 +11,7 @@ mod process;
 mod systems;
 
 pub use addons::cleanup::Cleanup;
+pub use addons::retry::{Retry, RetryEvent};
 pub use local_command::LocalCommand;
 pub use process::Process;
 
@@ -68,6 +69,7 @@ impl Plugin for BevyLocalCommandsPlugin {
         app.add_event::<ProcessOutput>()
             .add_event::<ProcessCompleted>()
             .add_event::<ProcessError>()
+            .add_event::<RetryEvent>()
             .add_systems(
                 Update,
                 (
@@ -75,6 +77,7 @@ impl Plugin for BevyLocalCommandsPlugin {
                     systems::handle_process_output,
                     systems::handle_completed_process,
                     addons::cleanup::cleanup_completed_process,
+                    addons::retry::retry_failed_process,
                 )
                     .chain(),
             );
