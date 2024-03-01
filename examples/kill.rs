@@ -23,9 +23,8 @@ fn startup(mut commands: Commands) {
         "echo Sleeping for 4s && sleep 4 && echo This should not print or execute && sleep 100",
     ]);
     #[cfg(windows)]
-    let cmd = LocalCommand::new("cmd").args([
-        "/C",
-        "echo Sleeping for 4s && timeout 4 && echo This should not print or execute && timeout 100",
+    let cmd = LocalCommand::new("powershell").args([
+        "echo 'Sleeping for 4s'; sleep 4; echo 'This should not print or execute'; sleep 100",
     ]);
 
     let id = commands.spawn(cmd).id();
