@@ -107,6 +107,7 @@ fn retries_and_cleanup_on_completion(mut commands: Commands) {
 
 | bevy | bevy_local_commands |
 | ---- | ------------------- |
+| 0.14 | 0.6                 |
 | 0.13 | 0.5                 |
 | 0.12 | 0.4                 |
 | 0.11 | 0.1                 |
