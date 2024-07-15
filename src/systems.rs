@@ -3,6 +3,7 @@ use std::process::{Command, Stdio};
 
 use bevy::{prelude::*, tasks::IoTaskPool};
 
+use crate::process::{ProcessState, ProcessDone};
 use crate::{
     LocalCommand, Process, ProcessCompleted, ProcessError, ProcessErrorInfo, ProcessOutput,
     ProcessOutputBuffer,
@@ -57,13 +58,48 @@ pub(crate) fn handle_completed_process(
     mut process_completed_event: EventWriter<ProcessCompleted>,
 ) {
     for (entity, mut process) in query.iter_mut() {
+        match process.state {
+            // Transition state from ProcessState::Error to ProcessDone::Failed. Retry addons should have already kicked in.
+            ProcessState::Error => {
+                process.state = ProcessState::Done(ProcessDone::Failed);
+                process_completed_event.send(ProcessCompleted {
+                    entity,
+                    exit_status: process.process.wait().unwrap(),
+                });
+                continue;
+            },
+            // If no cleanup addons is active, we don't want to keep checking this completed process.
+            ProcessState::Done(_) => continue,
+            _ => {},
+        }
+
+        // Deal with state management when process completes.
         if process.reader_task.is_finished() {
             let exit_status = process.process.wait().unwrap();
-
-            process_completed_event.send(ProcessCompleted {
-                entity,
-                exit_status,
-            });
+            match exit_status.code() {
+                None => {
+                    info!("Process with pid {} was killed", process.id());
+                    process.state = ProcessState::Done(ProcessDone::Killed);
+                    process_completed_event.send(ProcessCompleted {
+                        entity,
+                        exit_status,
+                    });
+                },
+                Some(0) => {
+                    info!("Process with pid {} exited with code 0", process.id());
+                    process.state = ProcessState::Done(ProcessDone::Succeeded);
+                    process_completed_event.send(ProcessCompleted {
+                        entity,
+                        exit_status,
+                    });
+                },
+                Some(code) => {
+                    error!("Process with pid {} exited with code {}", process.id(), code);
+                    // The next frame will transition the state from ProcessState::Error to
+                    // ProcessDone::Failed if no retry addons have triggered.
+                    process.state = ProcessState::Error;
+                }
+            }
         }
     }
 }
@@ -111,5 +147,6 @@ pub(crate) fn spawn_process(command: &mut Command) -> io::Result<Process> {
         output_buffer,
         reader_task,
         stdin_writer,
+        state: ProcessState::Running,
     })
 }
