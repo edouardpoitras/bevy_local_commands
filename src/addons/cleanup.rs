@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{LocalCommand, process::{Process, ProcessState}};
+use crate::{LocalCommand, LocalCommandState, Chain, Delay, Retry, process::Process};
 
 #[derive(Debug, Component)]
 pub enum Cleanup {
@@ -13,11 +13,11 @@ pub enum Cleanup {
 /// Processes without the Cleanup component are ignored.
 pub(crate) fn cleanup_completed_process(
     mut commands: Commands,
-    query: Query<(Entity, &Process, &Cleanup)>,
+    query: Query<(Entity, &LocalCommand, &Cleanup)>,
 ) {
-    for (entity, process, cleanup) in query.iter() {
-        match process.state {
-            ProcessState::Done(_) => {
+    for (entity, local_command, cleanup) in query.iter() {
+        match local_command.state {
+            LocalCommandState::Done(_) => {
                 match cleanup {
                     Cleanup::DespawnEntity => {
                         if let Some(mut entity_commands) = commands.get_entity(entity) {
@@ -26,7 +26,7 @@ pub(crate) fn cleanup_completed_process(
                     },
                     Cleanup::RemoveComponents => {
                         if let Some(mut entity_commands) = commands.get_entity(entity) {
-                            entity_commands.remove::<(Process, Cleanup, LocalCommand)>();
+                            entity_commands.remove::<(Process, Chain, Delay, Retry, Cleanup, LocalCommand)>();
                         }
                     },
                 }

@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{systems::spawn_process, LocalCommand, process::{Process, ProcessState}};
+use crate::{LocalCommand, LocalCommandState, process::Process};
 
 #[derive(Debug, Component)]
 pub enum Retry {
@@ -19,13 +19,13 @@ pub struct RetryEvent {
 /// The Retry component is removed from the entity when retries are done.
 pub(crate) fn retry_failed_process(
     mut commands: Commands,
-    mut query: Query<(Entity, &mut LocalCommand, &mut Process, &mut Retry)>,
+    mut query: Query<(Entity, &mut LocalCommand, &mut Retry), With<Process>>,
     mut retry_events: EventWriter<RetryEvent>,
 ) {
 
-    for (entity, mut local_command, mut process, mut retry) in query.iter_mut() {
-        match process.state {
-            ProcessState::Error => {
+    for (entity, mut local_command, mut retry) in query.iter_mut() {
+        match local_command.state {
+            LocalCommandState::Error => {
                 match &mut *retry {
                     Retry::Attempts(retries) => {
                         if let Some(mut entity_commands) =
@@ -40,22 +40,13 @@ pub(crate) fn retry_failed_process(
                             *retries -= 1;
 
                             // Spawn the process once again
-                            match spawn_process(&mut local_command.command) {
-                                Ok(new_process) => {
-                                    *process = new_process;
-                                    retry_events.send(RetryEvent {
-                                        entity: entity,
-                                        retries_left: *retries,
-                                    });
-                                },
-                                Err(_) => {
-                                    error!(
-                                        "Failed to retry process: {:?} {:?}",
-                                        local_command.get_program(),
-                                        local_command.get_args()
-                                    );
-                                },
-                            }
+                            commands.entity(entity).remove::<Process>();
+                            local_command.delay = None;
+                            local_command.state = LocalCommandState::Ready;
+                            retry_events.send(RetryEvent {
+                                entity: entity,
+                                retries_left: *retries,
+                            });
                         }
                     },
                 }

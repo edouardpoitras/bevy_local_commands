@@ -18,12 +18,12 @@ fn main() {
 fn startup(mut commands: Commands) {
     // Choose the command based on the OS
     #[cfg(not(windows))]
-    let cmd = LocalCommand::new("sh").args([
+    let cmd = LocalCommand::new("sh", None).args([
         "-c",
         "echo Sleeping for 4s && sleep 4 && echo This should not print or execute && sleep 100",
     ]);
     #[cfg(windows)]
-    let cmd = LocalCommand::new("powershell").args([
+    let cmd = LocalCommand::new("powershell", None).args([
         "echo 'Sleeping for 4s'; sleep 4; echo 'This should not print or execute'; sleep 100",
     ]);
 
@@ -31,10 +31,14 @@ fn startup(mut commands: Commands) {
     println!("Spawned the command as entity {id:?}")
 }
 
-fn kill(mut active_processes: Query<(Entity, &mut Process)>) {
+fn kill(mut active_processes: Query<(Entity, &mut Process)>, mut killed: Local<bool>) {
+    if *killed {
+        return;
+    }
     for (entity, mut process) in active_processes.iter_mut() {
         println!("Killing {entity:?}");
         process.kill().unwrap();
+        *killed = true;
     }
 }
 

@@ -10,9 +10,11 @@ mod local_command;
 mod process;
 mod systems;
 
+pub use addons::chain::Chain;
 pub use addons::cleanup::Cleanup;
+pub use addons::delay::Delay;
 pub use addons::retry::{Retry, RetryEvent};
-pub use local_command::LocalCommand;
+pub use local_command::{LocalCommand, LocalCommandState, LocalCommandDone};
 pub use process::Process;
 
 /// The ID of a process.
@@ -70,6 +72,7 @@ impl Plugin for BevyLocalCommandsPlugin {
             .add_event::<ProcessCompleted>()
             .add_event::<ProcessError>()
             .add_event::<RetryEvent>()
+            .add_systems(PreUpdate, addons::delay::apply_delay)
             .add_systems(
                 Update,
                 (
