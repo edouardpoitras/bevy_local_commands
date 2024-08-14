@@ -4,8 +4,8 @@ use std::process::{Command, Stdio};
 use bevy::{prelude::*, tasks::IoTaskPool};
 
 use crate::{
-    LocalCommand, LocalCommandState, LocalCommandDone, Process, ProcessCompleted, ProcessError, ProcessErrorInfo, ProcessOutput,
-    ProcessOutputBuffer,
+    LocalCommand, LocalCommandDone, LocalCommandState, Process, ProcessCompleted, ProcessError,
+    ProcessErrorInfo, ProcessOutput, ProcessOutputBuffer,
 };
 
 /// A command is pending process creation.
@@ -105,11 +105,15 @@ pub(crate) fn handle_completed_process(
                     });
                 },
                 Some(code) => {
-                    error!("Process with pid {} exited with code {}", process.id(), code);
+                    error!(
+                        "Process with pid {} exited with code {}",
+                        process.id(),
+                        code
+                    );
                     // The next frame will transition the state from LocalCommandState::Error to
                     // LocalCommandDone::Failed if no retry addons have triggered.
                     local_command.state = LocalCommandState::Error;
-                }
+                },
             }
         }
     }

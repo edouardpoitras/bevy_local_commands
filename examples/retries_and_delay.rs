@@ -1,8 +1,8 @@
-use std::time::Duration;
 use bevy::prelude::*;
 use bevy_local_commands::{
-    BevyLocalCommandsPlugin, LocalCommand, ProcessCompleted, Retry, RetryEvent, Delay,
+    BevyLocalCommandsPlugin, Delay, LocalCommand, ProcessCompleted, Retry, RetryEvent,
 };
+use std::time::Duration;
 
 fn main() {
     App::new()
@@ -16,19 +16,25 @@ fn startup(mut commands: Commands) {
     // Choose the command based on the OS
     #[cfg(not(windows))]
     let cmd =
-        LocalCommand::new("sh", None).args(["-c", "echo Sleeping for 1s && sleep 1 && THIS SHOULD FAIL"]);
+        LocalCommand::new("sh").args(["-c", "echo Sleeping for 1s && sleep 1 && THIS SHOULD FAIL"]);
     #[cfg(windows)]
-    let cmd = LocalCommand::new("cmd", None).args([
+    let cmd = LocalCommand::new("cmd").args([
         "/C",
         "echo Sleeping for 1s && timeout 1 && THIS SHOULD FAIL",
     ]);
 
-    // EDDIE - this goes on an infinite loop
-    // Fix this then add examples for retry + delay + cleanup
+    // EDDIE
+    // Add examples for retry + delay + cleanup
     // Then work on implementing chain
 
-    let id = commands.spawn((cmd, Retry::Attempts(3), Delay::Fixed(Duration::from_secs(2)))).id();
-    println!("Spawned the command as entity {id:?} with 3 retries");
+    let id = commands
+        .spawn((
+            cmd,
+            Retry::Attempts(2),
+            Delay::Fixed(Duration::from_secs(2)),
+        ))
+        .id();
+    println!("Spawned the command as entity {id:?} with 2 retries and a 3s delay");
 }
 
 fn update(

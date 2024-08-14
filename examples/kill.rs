@@ -18,12 +18,12 @@ fn main() {
 fn startup(mut commands: Commands) {
     // Choose the command based on the OS
     #[cfg(not(windows))]
-    let cmd = LocalCommand::new("sh", None).args([
+    let cmd = LocalCommand::new("sh").args([
         "-c",
         "echo Sleeping for 4s && sleep 4 && echo This should not print or execute && sleep 100",
     ]);
     #[cfg(windows)]
-    let cmd = LocalCommand::new("powershell", None).args([
+    let cmd = LocalCommand::new("powershell").args([
         "echo 'Sleeping for 4s'; sleep 4; echo 'This should not print or execute'; sleep 100",
     ]);
 

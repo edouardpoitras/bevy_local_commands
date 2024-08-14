@@ -14,7 +14,7 @@ pub use addons::chain::Chain;
 pub use addons::cleanup::Cleanup;
 pub use addons::delay::Delay;
 pub use addons::retry::{Retry, RetryEvent};
-pub use local_command::{LocalCommand, LocalCommandState, LocalCommandDone};
+pub use local_command::{LocalCommand, LocalCommandDone, LocalCommandState};
 pub use process::Process;
 
 /// The ID of a process.

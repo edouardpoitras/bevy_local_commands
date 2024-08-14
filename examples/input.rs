@@ -15,9 +15,9 @@ fn startup(mut commands: Commands) {
     // Choose the command based on the OS
     #[cfg(not(windows))]
     let cmd =
-        LocalCommand::new("sh", None).args(["-c", "echo 'Enter Name:' && read NAME && echo Hello $NAME"]);
+        LocalCommand::new("sh").args(["-c", "echo 'Enter Name:' && read NAME && echo Hello $NAME"]);
     #[cfg(windows)]
-    let cmd = LocalCommand::new("powershell", None)
+    let cmd = LocalCommand::new("powershell")
         .args(["$name = Read-Host 'Enter Name'; echo \"Name Entered: $name\""]);
     let id = commands.spawn(cmd).id();
     println!("Spawned the command as entity {id:?}");

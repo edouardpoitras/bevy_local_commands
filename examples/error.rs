@@ -10,7 +10,7 @@ fn main() {
 }
 
 fn startup(mut commands: Commands) {
-    commands.spawn(LocalCommand::new("commandthatdoesnotexist", None));
+    commands.spawn(LocalCommand::new("commandthatdoesnotexist"));
 }
 
 fn update(mut process_error: EventReader<ProcessError>) {

@@ -43,13 +43,13 @@ pub enum LocalCommandDone {
 }
 
 impl LocalCommand {
-    pub fn new<S>(program: S, delay: Option<Timer>) -> Self
+    pub fn new<S>(program: S) -> Self
     where
         S: AsRef<OsStr>,
     {
         Self {
             command: Command::new(program),
-            delay,
+            delay: None,
             state: LocalCommandState::Ready,
         }
     }
@@ -288,7 +288,11 @@ impl LocalCommand {
 
 impl From<Command> for LocalCommand {
     fn from(command: Command) -> Self {
-        Self { command, delay: None, state: LocalCommandState::Ready }
+        Self {
+            command,
+            delay: None,
+            state: LocalCommandState::Ready,
+        }
     }
 }
 

@@ -14,9 +14,9 @@ fn main() {
 fn startup(mut commands: Commands) {
     // Choose the command based on the OS
     #[cfg(not(windows))]
-    let cmd = LocalCommand::new("sh", None).args(["-c", "echo Sleeping for 1s && sleep 1 && INVALID "]);
+    let cmd = LocalCommand::new("sh").args(["-c", "echo Sleeping for 1s && sleep 1 && INVALID "]);
     #[cfg(windows)]
-    let cmd = LocalCommand::new("cmd", None).args(["/C", "echo Sleeping for 1s && timeout 1 && INVALID"]);
+    let cmd = LocalCommand::new("cmd").args(["/C", "echo Sleeping for 1s && timeout 1 && INVALID"]);
 
     let id = commands
         .spawn((cmd, Retry::Attempts(3), Cleanup::RemoveComponents))
@@ -27,7 +27,13 @@ fn startup(mut commands: Commands) {
 fn update(
     mut process_completed_event: EventReader<ProcessCompleted>,
     mut retry_events: EventReader<RetryEvent>,
-    query: Query<(Entity, Option<&LocalCommand>, Option<&Process>, Option<&Retry>, Option<&Cleanup>)>,
+    query: Query<(
+        Entity,
+        Option<&LocalCommand>,
+        Option<&Process>,
+        Option<&Retry>,
+        Option<&Cleanup>,
+    )>,
 ) {
     for retry_event in retry_events.read() {
         println!("Retry event triggered: {:?}", retry_event);

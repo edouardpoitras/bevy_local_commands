@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{LocalCommand, LocalCommandState, process::Process};
+use crate::{process::Process, LocalCommand, LocalCommandState};
 
 #[derive(Debug, Component)]
 pub enum Retry {
@@ -22,36 +22,30 @@ pub(crate) fn retry_failed_process(
     mut query: Query<(Entity, &mut LocalCommand, &mut Retry), With<Process>>,
     mut retry_events: EventWriter<RetryEvent>,
 ) {
-
     for (entity, mut local_command, mut retry) in query.iter_mut() {
-        match local_command.state {
-            LocalCommandState::Error => {
-                match &mut *retry {
-                    Retry::Attempts(retries) => {
-                        if let Some(mut entity_commands) =
-                            commands.get_entity(entity)
-                        {
-                            if *retries < 1 {
-                                entity_commands.remove::<Retry>();
-                                continue;
-                            }
-
-                            // Update the retry attempts
-                            *retries -= 1;
-
-                            // Spawn the process once again
-                            commands.entity(entity).remove::<Process>();
-                            local_command.delay = None;
-                            local_command.state = LocalCommandState::Ready;
-                            retry_events.send(RetryEvent {
-                                entity: entity,
-                                retries_left: *retries,
-                            });
+        if local_command.state == LocalCommandState::Error {
+            match &mut *retry {
+                Retry::Attempts(retries) => {
+                    if let Some(mut entity_commands) = commands.get_entity(entity) {
+                        if *retries < 1 {
+                            entity_commands.remove::<Retry>();
+                            continue;
                         }
-                    },
-                }
-            },
-            _ => {},
+
+                        // Update the retry attempts
+                        *retries -= 1;
+
+                        // Spawn the process once again
+                        commands.entity(entity).remove::<Process>();
+                        local_command.delay = None;
+                        local_command.state = LocalCommandState::Ready;
+                        retry_events.send(RetryEvent {
+                            entity,
+                            retries_left: *retries,
+                        });
+                    }
+                },
+            }
         }
     }
 }
