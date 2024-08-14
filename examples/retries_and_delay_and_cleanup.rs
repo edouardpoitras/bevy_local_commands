@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use bevy_local_commands::{
-    BevyLocalCommandsPlugin, Delay, LocalCommand, ProcessCompleted, Retry, RetryEvent,
+    BevyLocalCommandsPlugin, Cleanup, Delay, LocalCommand, ProcessCompleted, Retry, RetryEvent,
 };
 use std::time::Duration;
 
@@ -28,6 +28,7 @@ fn startup(mut commands: Commands) {
             cmd,
             Retry::Attempts(2),
             Delay::Fixed(Duration::from_secs(2)),
+            Cleanup::RemoveComponents,
         ))
         .id();
     println!("Spawned the command as entity {id:?} with 2 retries and a 2s delay");
