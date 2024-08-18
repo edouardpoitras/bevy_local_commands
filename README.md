@@ -117,6 +117,23 @@ fn delay_process_start(mut commands: Commands) {
 }
 ```
 
+**Chaining:**
+
+```rust
+fn chain_multiple_commands(mut commands: Commands) {
+    commands.spawn((
+        Chain::new(vec![
+            LocalCommand::new("sh").args(["-c", "echo 'First command'"]),
+            LocalCommand::new("sh").args(["-c", "echo 'Second command'"]),
+            LocalCommand::new("sh").args(["-c", "echo 'Third command'"]),
+        ]),
+        Retry::Attempts(2), // Retry applies to any link in the chain
+        Delay::Fixed(Duration::from_secs(3)), // Wait 3s between retries and chain commands
+        Cleanup::RemoveComponents // Remove Chain, Retry, Delay, and Cleanup components upon completion
+    ));
+}
+```
+
 ## Todo
 
 - [ ] Mac testing (not sure if it works yet)
