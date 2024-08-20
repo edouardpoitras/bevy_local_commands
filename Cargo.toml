@@ -1,6 +1,6 @@
 [package]
 name = "bevy_local_commands"
-version = "0.6.1"
+version = "0.7.0"
 edition = "2021"
 description = "Simple local shell commands for the Bevy game engine"
 license = "MIT OR Apache-2.0"
