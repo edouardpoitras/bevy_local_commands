@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{systems::spawn_process, LocalCommand, Process, ProcessCompleted};
+use crate::{process::Process, LocalCommand, LocalCommandState};
 
 #[derive(Debug, Component)]
 pub enum Retry {
@@ -19,46 +19,30 @@ pub struct RetryEvent {
 /// The Retry component is removed from the entity when retries are done.
 pub(crate) fn retry_failed_process(
     mut commands: Commands,
-    mut query: Query<(&mut LocalCommand, &mut Process, &mut Retry)>,
+    mut query: Query<(Entity, &mut LocalCommand, &mut Retry), With<Process>>,
     mut retry_events: EventWriter<RetryEvent>,
-    mut process_completed_events: EventReader<ProcessCompleted>,
 ) {
-    for process_completed_event in process_completed_events.read() {
-        if process_completed_event.exit_status.success() {
-            continue;
-        }
-        if let Ok((mut local_command, mut process, mut retry)) =
-            query.get_mut(process_completed_event.entity)
-        {
+    for (entity, mut local_command, mut retry) in query.iter_mut() {
+        if local_command.state == LocalCommandState::Error {
             match &mut *retry {
                 Retry::Attempts(retries) => {
-                    if let Some(mut entity_commands) =
-                        commands.get_entity(process_completed_event.entity)
-                    {
+                    if let Some(mut entity_commands) = commands.get_entity(entity) {
                         if *retries < 1 {
                             entity_commands.remove::<Retry>();
                             continue;
                         }
+
                         // Update the retry attempts
                         *retries -= 1;
 
                         // Spawn the process once again
-                        match spawn_process(&mut local_command.command) {
-                            Ok(new_process) => {
-                                *process = new_process;
-                                retry_events.send(RetryEvent {
-                                    entity: process_completed_event.entity,
-                                    retries_left: *retries,
-                                });
-                            },
-                            Err(_) => {
-                                error!(
-                                    "Failed to retry process: {:?} {:?}",
-                                    local_command.get_program(),
-                                    local_command.get_args()
-                                );
-                            },
-                        }
+                        commands.entity(entity).remove::<Process>();
+                        local_command.delay = None;
+                        local_command.state = LocalCommandState::Ready;
+                        retry_events.send(RetryEvent {
+                            entity,
+                            retries_left: *retries,
+                        });
                     }
                 },
             }

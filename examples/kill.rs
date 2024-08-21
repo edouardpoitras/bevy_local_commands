@@ -31,10 +31,14 @@ fn startup(mut commands: Commands) {
     println!("Spawned the command as entity {id:?}")
 }
 
-fn kill(mut active_processes: Query<(Entity, &mut Process)>) {
+fn kill(mut active_processes: Query<(Entity, &mut Process)>, mut killed: Local<bool>) {
+    if *killed {
+        return;
+    }
     for (entity, mut process) in active_processes.iter_mut() {
         println!("Killing {entity:?}");
         process.kill().unwrap();
+        *killed = true;
     }
 }
 

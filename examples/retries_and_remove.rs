@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use bevy_local_commands::{
-    BevyLocalCommandsPlugin, Cleanup, LocalCommand, ProcessCompleted, Retry,
+    BevyLocalCommandsPlugin, Cleanup, LocalCommand, Process, ProcessCompleted, Retry, RetryEvent,
 };
 
 fn main() {
@@ -19,27 +19,37 @@ fn startup(mut commands: Commands) {
     let cmd = LocalCommand::new("cmd").args(["/C", "echo Sleeping for 1s && timeout 1 && INVALID"]);
 
     let id = commands
-        .spawn((cmd, Retry::Attempts(3), Cleanup::DespawnEntity))
+        .spawn((cmd, Retry::Attempts(3), Cleanup::RemoveComponents))
         .id();
     println!("Spawned the command as temporary entity {id:?} with 3 retries");
 }
 
 fn update(
     mut process_completed_event: EventReader<ProcessCompleted>,
-    query: Query<(&LocalCommand, &Retry)>, // We could also listen for RetryEvent to get retry status
+    mut retry_events: EventReader<RetryEvent>,
+    query: Query<(
+        Entity,
+        Option<&LocalCommand>,
+        Option<&Process>,
+        Option<&Retry>,
+        Option<&Cleanup>,
+    )>,
 ) {
-    if let Some(process_completed) = process_completed_event.read().last() {
-        if let Ok((local_command, retry)) = query.get(process_completed.entity) {
-            println!(
-                "Command {:?} {:?} completed (Success - {})",
-                local_command.get_program(),
-                local_command.get_args(),
-                process_completed.exit_status.success()
-            );
-            println!("Retries remaining: {:?}", retry);
-        } else {
-            println!("Can't find entity anymore, exiting");
-            std::process::exit(0);
-        }
+    for retry_event in retry_events.read() {
+        println!("Retry event triggered: {:?}", retry_event);
+        let components = query.get(retry_event.entity).unwrap();
+        assert!(components.1.is_some());
+        assert!(components.2.is_none());
+        assert!(components.3.is_some());
+        assert!(components.4.is_some());
+    }
+    for process_completed in process_completed_event.read() {
+        println!("{:?}", process_completed);
+        let components = query.get(process_completed.entity).unwrap();
+        assert!(components.1.is_none());
+        assert!(components.2.is_none());
+        assert!(components.3.is_none());
+        assert!(components.4.is_none());
+        std::process::exit(0);
     }
 }

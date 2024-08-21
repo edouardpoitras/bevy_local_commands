@@ -4,28 +4,39 @@ use std::process::{Command, Stdio};
 use bevy::{prelude::*, tasks::IoTaskPool};
 
 use crate::{
-    LocalCommand, Process, ProcessCompleted, ProcessError, ProcessErrorInfo, ProcessOutput,
-    ProcessOutputBuffer,
+    LocalCommand, LocalCommandDone, LocalCommandState, Process, ProcessCompleted, ProcessError,
+    ProcessErrorInfo, ProcessOutput, ProcessOutputBuffer,
 };
 
-/// A new command has been added.
+/// A command is pending process creation.
 ///
-/// This system will spawn the corresponding process and track the process output.
+/// This system will spawn the corresponding process if it is ready.
 pub(crate) fn handle_new_command(
     mut commands: Commands,
-    mut query: Query<(Entity, &mut LocalCommand), (Added<LocalCommand>, Without<Process>)>,
+    mut query: Query<(Entity, &mut LocalCommand), Without<Process>>,
     mut process_error_event: EventWriter<ProcessError>,
+    time: Res<Time>,
 ) {
     for (entity, mut local_command) in query.iter_mut() {
-        match spawn_process(&mut local_command.command) {
-            Ok(process) => {
-                commands.entity(entity).insert(process);
+        match &mut local_command.delay {
+            Some(ref mut timer) if !timer.finished() => {
+                timer.tick(time.delta());
             },
-            Err(_) => {
-                process_error_event.send(ProcessError {
-                    entity,
-                    info: ProcessErrorInfo::FailedToStart,
-                });
+            _ => {
+                local_command.delay = None;
+                match spawn_process(&mut local_command.command) {
+                    Ok(process) => {
+                        commands.entity(entity).insert(process);
+                        local_command.state = LocalCommandState::Running;
+                    },
+                    Err(_) => {
+                        process_error_event.send(ProcessError {
+                            entity,
+                            info: ProcessErrorInfo::FailedToStart,
+                        });
+                        local_command.state = LocalCommandState::Error;
+                    },
+                }
             },
         }
     }
@@ -53,17 +64,57 @@ pub(crate) fn handle_process_output(
 ///
 /// For the completed processes, a [`ProcessCompleted`] event is produced.
 pub(crate) fn handle_completed_process(
-    mut query: Query<(Entity, &mut Process)>,
+    mut query: Query<(Entity, &mut LocalCommand, &mut Process)>,
     mut process_completed_event: EventWriter<ProcessCompleted>,
 ) {
-    for (entity, mut process) in query.iter_mut() {
+    for (entity, mut local_command, mut process) in query.iter_mut() {
+        match local_command.state {
+            // Transition state from LocalCommandState::Error to LocalCommandDone::Failed.
+            // Retry addons should have already kicked in - unless the process failed to spawn.
+            LocalCommandState::Error => {
+                local_command.state = LocalCommandState::Done(LocalCommandDone::Failed);
+                process_completed_event.send(ProcessCompleted {
+                    entity,
+                    exit_status: process.process.wait().unwrap(),
+                });
+                continue;
+            },
+            // If no cleanup addons is active, we don't want to keep checking this completed process.
+            LocalCommandState::Done(_) => continue,
+            _ => {},
+        }
+
+        // Deal with state management when process completes.
         if process.reader_task.is_finished() {
             let exit_status = process.process.wait().unwrap();
-
-            process_completed_event.send(ProcessCompleted {
-                entity,
-                exit_status,
-            });
+            match exit_status.code() {
+                None => {
+                    info!("Process with pid {} was killed", process.id());
+                    local_command.state = LocalCommandState::Done(LocalCommandDone::Killed);
+                    process_completed_event.send(ProcessCompleted {
+                        entity,
+                        exit_status,
+                    });
+                },
+                Some(0) => {
+                    info!("Process with pid {} exited with code 0", process.id());
+                    local_command.state = LocalCommandState::Done(LocalCommandDone::Succeeded);
+                    process_completed_event.send(ProcessCompleted {
+                        entity,
+                        exit_status,
+                    });
+                },
+                Some(code) => {
+                    error!(
+                        "Process with pid {} exited with code {}",
+                        process.id(),
+                        code
+                    );
+                    // The next frame will transition the state from LocalCommandState::Error to
+                    // LocalCommandDone::Failed if no retry addons have triggered.
+                    local_command.state = LocalCommandState::Error;
+                },
+            }
         }
     }
 }

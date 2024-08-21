@@ -10,6 +10,34 @@ use bevy::prelude::*;
 #[derive(Component)]
 pub struct LocalCommand {
     pub(crate) command: Command,
+    pub(crate) delay: Option<Timer>,
+    pub(crate) state: LocalCommandState,
+}
+
+/// Keep track of the state of the running process.
+///
+/// This gives more room for addons to interact with the process without interfering with each other.
+#[derive(Debug, PartialEq)]
+pub enum LocalCommandState {
+    /// Ready - Process is ready to be run - pending start time.
+    Ready,
+    /// Running - Process is running.
+    Running,
+    /// Error - Process errored out. Allows for retry logic to kick in. Otherwise state moves to Done.
+    Error,
+    /// Done - Process has completed. Final state, allows for cleanup logic.
+    Done(LocalCommandDone),
+}
+
+/// Keeps track of the final state of the process.
+#[derive(Debug, PartialEq)]
+pub enum LocalCommandDone {
+    /// Killed - Process was killed. Allows for cleanup logic.
+    Killed,
+    /// Failed - Process failed permanently. Assumes retries exhausted. Allows for cleanup logic.
+    Failed,
+    /// Succeeded - Process succeeded. Allows for cleanup logic.
+    Succeeded,
 }
 
 impl LocalCommand {
@@ -19,6 +47,8 @@ impl LocalCommand {
     {
         Self {
             command: Command::new(program),
+            delay: None,
+            state: LocalCommandState::Ready,
         }
     }
 
@@ -256,7 +286,11 @@ impl LocalCommand {
 
 impl From<Command> for LocalCommand {
     fn from(command: Command) -> Self {
-        Self { command }
+        Self {
+            command,
+            delay: None,
+            state: LocalCommandState::Ready,
+        }
     }
 }
 

@@ -83,18 +83,36 @@ fn get_completed(mut process_completed_event: EventReader<ProcessCompleted>) {
 }
 ```
 
-**Retry and cleanup behavior:**
+**Retries:**
 
 ```rust
-fn retries_and_cleanup_on_completion(mut commands: Commands) {
+fn retries(mut commands: Commands) {
     commands.spawn((
         LocalCommand::new("bash").args(["-c", "sleep 1 && invalid-command --that=fails"]),
-        // Attempt the command 3 times before giving up
-        // NOTE: The Retry component will be removed from the entity when no retries are left
-        Retry::Attempts(3)
-        // Cleanup::DespawnEntity will despawn the entity upon process completion.
-        // Cleanup::RemoveComponents will remove this crate's components upon process completion.
-        Cleanup::DespawnEntity
+        Retry::Attempts(3) // Attempt the command 3 times before giving up
+    ));
+}
+```
+
+**Cleanup:**
+
+```rust
+fn cleanup_on_completion(mut commands: Commands) {
+    commands.spawn((
+        LocalCommand::new("bash").args(["-c", "sleep 1"]),
+        Cleanup::DespawnEntity // Will despawn the entity upon process completion
+        // Cleanup::RemoveComponents // Will remove only this crate's components upon process completion
+    ));
+}
+```
+
+**Delay:**
+
+```rust
+fn delay_process_start(mut commands: Commands) {
+    commands.spawn((
+        LocalCommand::new("bash").args(["-c", "sleep 1"]),
+        Delay::Fixed(Duration::from_secs(2)), // Start the process after a 2s delay (applies to each retry)
     ));
 }
 ```

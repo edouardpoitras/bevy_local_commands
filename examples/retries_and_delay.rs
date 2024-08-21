@@ -1,7 +1,8 @@
 use bevy::prelude::*;
 use bevy_local_commands::{
-    BevyLocalCommandsPlugin, LocalCommand, ProcessCompleted, Retry, RetryEvent,
+    BevyLocalCommandsPlugin, Delay, LocalCommand, ProcessCompleted, Retry, RetryEvent,
 };
+use std::time::Duration;
 
 fn main() {
     App::new()
@@ -22,8 +23,14 @@ fn startup(mut commands: Commands) {
         "echo Sleeping for 1s && timeout 1 && THIS SHOULD FAIL",
     ]);
 
-    let id = commands.spawn((cmd, Retry::Attempts(3))).id();
-    println!("Spawned the command as entity {id:?} with 3 retries");
+    let id = commands
+        .spawn((
+            cmd,
+            Retry::Attempts(2),
+            Delay::Fixed(Duration::from_secs(2)),
+        ))
+        .id();
+    println!("Spawned the command as entity {id:?} with 2 retries and a 2s delay");
 }
 
 fn update(
