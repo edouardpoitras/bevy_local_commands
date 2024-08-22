@@ -16,13 +16,21 @@ fn main() {
 
 fn setup(mut commands: Commands) {
     // Spawn a entity with all addons
+    #[cfg(not(windows))]
+    let chain = Chain::new(vec![
+        LocalCommand::new("sh").args(["-c", "echo 'First command'"]),
+        LocalCommand::new("sh").args(["-c", "echo 'Second command'"]),
+        LocalCommand::new("sh").args(["-c", "echo 'Third command'"]),
+    ]);
+    #[cfg(windows)]
+    let chain = Chain::new(vec![
+        LocalCommand::new("powershell").args(["echo 'First command'"]),
+        LocalCommand::new("powershell").args(["echo 'Second command'"]),
+        LocalCommand::new("powershell").args(["echo 'Third command'"]),
+    ]);
     let id = commands
         .spawn((
-            Chain::new(vec![
-                LocalCommand::new("sh").args(["-c", "echo 'First command'"]),
-                LocalCommand::new("sh").args(["-c", "echo 'Second command'"]),
-                LocalCommand::new("sh").args(["-c", "echo 'Third command'"]),
-            ]),
+            chain,
             Retry::Attempts(2),
             Delay::Fixed(Duration::from_secs(3)),
             Cleanup::RemoveComponents,

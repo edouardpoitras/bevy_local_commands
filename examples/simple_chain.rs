@@ -13,10 +13,17 @@ fn main() {
 
 fn setup(mut commands: Commands) {
     // Create a chain of commands
+    #[cfg(not(windows))]
     let chain = Chain::new(vec![
         LocalCommand::new("sh").args(["-c", "echo 'First command' && sleep 1"]),
         LocalCommand::new("sh").args(["-c", "echo 'Second command' && sleep 1"]),
         LocalCommand::new("sh").args(["-c", "echo 'Third command' && sleep 1"]),
+    ]);
+    #[cfg(windows)]
+    let chain = Chain::new(vec![
+        LocalCommand::new("powershell").args(["echo 'First command' && sleep 1"]),
+        LocalCommand::new("powershell").args(["echo 'Second command' && sleep 1"]),
+        LocalCommand::new("powershell").args(["echo 'Third command' && sleep 1"]),
     ]);
 
     // Spawn an entity with the Chain component
