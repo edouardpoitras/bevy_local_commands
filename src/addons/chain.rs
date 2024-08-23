@@ -1,6 +1,7 @@
 use crate::local_command::LocalCommand;
 use crate::{Process, ProcessCompleted, ProcessError};
 use bevy::prelude::*;
+use std::iter::IntoIterator;
 
 #[derive(Component)]
 pub struct Chain {
@@ -8,8 +9,10 @@ pub struct Chain {
 }
 
 impl Chain {
-    pub fn new(commands: Vec<LocalCommand>) -> Self {
-        Self { commands }
+    pub fn new(commands: impl IntoIterator<Item = LocalCommand>) -> Self {
+        Self {
+            commands: commands.into_iter().collect(),
+        }
     }
 }
 
