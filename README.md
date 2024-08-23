@@ -42,7 +42,7 @@ fn kill_started_command(mut active_processes: Query<&mut Process>) {
 ```rust
 fn get_command_output(mut process_output_event: EventReader<ProcessOutput>) {
     for output in process_output_event.read() {
-        info!("Output for command {:?}", output.entity);
+        info!("Command output for entity {:?}", output.entity);
 
         for line in output.lines() {
             info!("Line Output: {}", line);
@@ -142,7 +142,7 @@ fn chain_multiple_commands(mut commands: Commands) {
 
 | bevy | bevy_local_commands |
 | ---- | ------------------- |
-| 0.14 | 0.6                 |
+| 0.14 | 0.7                 |
 | 0.13 | 0.5                 |
 | 0.12 | 0.4                 |
 | 0.11 | 0.1                 |
