@@ -10,7 +10,7 @@ mod local_command;
 mod process;
 mod systems;
 
-pub use addons::chain::Chain;
+pub use addons::chain::{Chain, ChainCompletedEvent};
 pub use addons::cleanup::Cleanup;
 pub use addons::delay::Delay;
 pub use addons::retry::{Retry, RetryEvent};
@@ -72,6 +72,7 @@ impl Plugin for BevyLocalCommandsPlugin {
             .add_event::<ProcessCompleted>()
             .add_event::<ProcessError>()
             .add_event::<RetryEvent>()
+            .add_event::<ChainCompletedEvent>()
             .add_systems(PreUpdate, addons::delay::apply_delay)
             .add_systems(
                 Update,
@@ -81,6 +82,7 @@ impl Plugin for BevyLocalCommandsPlugin {
                     systems::handle_completed_process,
                     addons::cleanup::cleanup_completed_process,
                     addons::retry::retry_failed_process,
+                    addons::chain::chain_execution_system,
                 )
                     .chain(),
             );
