@@ -142,6 +142,7 @@ fn chain_multiple_commands(mut commands: Commands) {
 
 | bevy | bevy_local_commands |
 | ---- | ------------------- |
+| 0.15 | 0.8                 |
 | 0.14 | 0.7                 |
 | 0.13 | 0.5                 |
 | 0.12 | 0.4                 |
