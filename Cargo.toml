@@ -1,15 +1,16 @@
 [package]
 name = "bevy_local_commands"
-version = "0.8.0"
+version = "0.9.0"
 edition = "2021"
 description = "Simple local shell commands for the Bevy game engine"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/edouardpoitras/bevy_local_commands"
 
 [dependencies]
-bevy = { version = "0.15", default-features = false, features = [
+bevy = { version = "0.16", default-features = false, features = [
   "multi_threaded",
 ] }
+bevy_log = "0.16"
 
 [lints.clippy]
 # Bevy queries are often complex types

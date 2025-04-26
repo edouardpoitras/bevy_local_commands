@@ -26,7 +26,7 @@ pub(crate) fn retry_failed_process(
         if local_command.state == LocalCommandState::Error {
             match &mut *retry {
                 Retry::Attempts(retries) => {
-                    if let Some(mut entity_commands) = commands.get_entity(entity) {
+                    if let Ok(mut entity_commands) = commands.get_entity(entity) {
                         if *retries < 1 {
                             entity_commands.remove::<Retry>();
                             continue;
@@ -39,7 +39,7 @@ pub(crate) fn retry_failed_process(
                         commands.entity(entity).remove::<Process>();
                         local_command.delay = None;
                         local_command.state = LocalCommandState::Ready;
-                        retry_events.send(RetryEvent {
+                        retry_events.write(RetryEvent {
                             entity,
                             retries_left: *retries,
                         });

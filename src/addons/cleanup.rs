@@ -26,12 +26,12 @@ pub(crate) fn cleanup_completed_process(
         if let LocalCommandState::Done(_) = local_command.state {
             match cleanup {
                 Cleanup::DespawnEntity => {
-                    if let Some(mut entity_commands) = commands.get_entity(entity) {
+                    if let Ok(mut entity_commands) = commands.get_entity(entity) {
                         entity_commands.despawn();
                     }
                 },
                 Cleanup::RemoveComponents => {
-                    if let Some(mut entity_commands) = commands.get_entity(entity) {
+                    if let Ok(mut entity_commands) = commands.get_entity(entity) {
                         entity_commands
                             .remove::<(Process, Chain, Delay, Retry, Cleanup, LocalCommand)>();
                     }

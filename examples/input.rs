@@ -33,7 +33,7 @@ fn update(
             println!("{line}");
         }
     }
-    if let Ok(mut process) = active_processes.get_single_mut() {
+    if let Ok(mut process) = active_processes.single_mut() {
         process.println("Bevy").unwrap_or_default();
     }
     if let Some(process_completed) = process_completed_event.read().last() {

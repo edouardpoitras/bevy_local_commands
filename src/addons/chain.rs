@@ -46,7 +46,7 @@ pub fn chain_execution_system(
                     commands
                         .entity(entity)
                         .remove::<(LocalCommand, Process, Chain)>();
-                    chain_completed_events.send(ChainCompletedEvent {
+                    chain_completed_events.write(ChainCompletedEvent {
                         entity,
                         success: true,
                     });
@@ -56,7 +56,7 @@ pub fn chain_execution_system(
                 commands
                     .entity(entity)
                     .remove::<(LocalCommand, Process, Chain)>();
-                chain_completed_events.send(ChainCompletedEvent {
+                chain_completed_events.write(ChainCompletedEvent {
                     entity,
                     success: false,
                 });
@@ -70,7 +70,7 @@ pub fn chain_execution_system(
             commands
                 .entity(entity)
                 .remove::<(LocalCommand, Process, Chain)>();
-            chain_completed_events.send(ChainCompletedEvent {
+            chain_completed_events.write(ChainCompletedEvent {
                 entity,
                 success: false,
             });

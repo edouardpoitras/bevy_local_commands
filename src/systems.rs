@@ -2,6 +2,7 @@ use std::io::{self, prelude::*, BufReader, BufWriter};
 use std::process::{Command, Stdio};
 
 use bevy::{prelude::*, tasks::IoTaskPool};
+use bevy_log::{error, info};
 
 use crate::{
     LocalCommand, LocalCommandDone, LocalCommandState, Process, ProcessCompleted, ProcessError,
@@ -30,7 +31,7 @@ pub(crate) fn handle_new_command(
                         local_command.state = LocalCommandState::Running;
                     },
                     Err(_) => {
-                        process_error_event.send(ProcessError {
+                        process_error_event.write(ProcessError {
                             entity,
                             info: ProcessErrorInfo::FailedToStart,
                         });
@@ -54,7 +55,7 @@ pub(crate) fn handle_process_output(
             std::mem::swap(&mut *buffer, &mut output);
 
             if !output.is_empty() {
-                process_output_event.send(ProcessOutput { entity, output });
+                process_output_event.write(ProcessOutput { entity, output });
             }
         }
     }
@@ -73,7 +74,7 @@ pub(crate) fn handle_completed_process(
             // Retry addons should have already kicked in - unless the process failed to spawn.
             LocalCommandState::Error => {
                 local_command.state = LocalCommandState::Done(LocalCommandDone::Failed);
-                process_completed_event.send(ProcessCompleted {
+                process_completed_event.write(ProcessCompleted {
                     entity,
                     exit_status: process.process.wait().unwrap(),
                 });
@@ -91,7 +92,7 @@ pub(crate) fn handle_completed_process(
                 None => {
                     info!("Process with pid {} was killed", process.id());
                     local_command.state = LocalCommandState::Done(LocalCommandDone::Killed);
-                    process_completed_event.send(ProcessCompleted {
+                    process_completed_event.write(ProcessCompleted {
                         entity,
                         exit_status,
                     });
@@ -99,7 +100,7 @@ pub(crate) fn handle_completed_process(
                 Some(0) => {
                     info!("Process with pid {} exited with code 0", process.id());
                     local_command.state = LocalCommandState::Done(LocalCommandDone::Succeeded);
-                    process_completed_event.send(ProcessCompleted {
+                    process_completed_event.write(ProcessCompleted {
                         entity,
                         exit_status,
                     });
