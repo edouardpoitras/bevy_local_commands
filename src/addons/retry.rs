@@ -7,7 +7,7 @@ pub enum Retry {
     Attempts(usize),
 }
 
-#[derive(Debug, Event)]
+#[derive(Debug, Message)]
 pub struct RetryEvent {
     pub entity: Entity,
     pub retries_left: usize,
@@ -20,7 +20,7 @@ pub struct RetryEvent {
 pub(crate) fn retry_failed_process(
     mut commands: Commands,
     mut query: Query<(Entity, &mut LocalCommand, &mut Retry), With<Process>>,
-    mut retry_events: EventWriter<RetryEvent>,
+    mut retry_events: MessageWriter<RetryEvent>,
 ) {
     for (entity, mut local_command, mut retry) in query.iter_mut() {
         if local_command.state == LocalCommandState::Error {

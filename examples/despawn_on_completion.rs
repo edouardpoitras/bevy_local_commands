@@ -21,7 +21,7 @@ fn startup(mut commands: Commands) {
 }
 
 fn update(
-    mut process_completed_event: EventReader<ProcessCompleted>,
+    mut process_completed_event: MessageReader<ProcessCompleted>,
     query: Query<Entity>,
     mut entity: Local<Option<Entity>>,
 ) {

@@ -7,10 +7,10 @@ license = "MIT OR Apache-2.0"
 repository = "https://github.com/edouardpoitras/bevy_local_commands"
 
 [dependencies]
-bevy = { version = "0.16", default-features = false, features = [
+bevy = { version = "0.17", default-features = false, features = [
   "multi_threaded",
 ] }
-bevy_log = "0.16"
+bevy_log = "0.17"
 
 [lints.clippy]
 # Bevy queries are often complex types

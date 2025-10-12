@@ -16,7 +16,7 @@ impl Chain {
     }
 }
 
-#[derive(Debug, Event)]
+#[derive(Debug, Message)]
 pub struct ChainCompletedEvent {
     pub entity: Entity,
     pub success: bool,
@@ -26,9 +26,9 @@ pub fn chain_execution_system(
     mut commands: Commands,
     mut chain_query: Query<(Entity, &mut Chain)>,
     no_local_command: Query<(), Without<LocalCommand>>,
-    mut process_completed_events: EventReader<ProcessCompleted>,
-    mut process_error_events: EventReader<ProcessError>,
-    mut chain_completed_events: EventWriter<ChainCompletedEvent>,
+    mut process_completed_events: MessageReader<ProcessCompleted>,
+    mut process_error_events: MessageReader<ProcessError>,
+    mut chain_completed_events: MessageWriter<ChainCompletedEvent>,
 ) {
     // Handle completed processes
     for event in process_completed_events.read() {

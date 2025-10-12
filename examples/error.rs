@@ -13,7 +13,7 @@ fn startup(mut commands: Commands) {
     commands.spawn(LocalCommand::new("commandthatdoesnotexist"));
 }
 
-fn update(mut process_error: EventReader<ProcessError>) {
+fn update(mut process_error: MessageReader<ProcessError>) {
     for error in process_error.read() {
         println!(
             "Error running command ({:?}): {:?}",

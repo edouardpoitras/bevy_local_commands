@@ -15,12 +15,12 @@ use crate::{
 pub(crate) fn handle_new_command(
     mut commands: Commands,
     mut query: Query<(Entity, &mut LocalCommand), Without<Process>>,
-    mut process_error_event: EventWriter<ProcessError>,
+    mut process_error_event: MessageWriter<ProcessError>,
     time: Res<Time>,
 ) {
     for (entity, mut local_command) in query.iter_mut() {
         match &mut local_command.delay {
-            Some(ref mut timer) if !timer.finished() => {
+            Some(ref mut timer) if !timer.is_finished() => {
                 timer.tick(time.delta());
             },
             _ => {
@@ -46,7 +46,7 @@ pub(crate) fn handle_new_command(
 /// Periodically empty each processes' output buffer and send the new lines as [`ProcessOutputEvent`].
 pub(crate) fn handle_process_output(
     query: Query<(Entity, &Process)>,
-    mut process_output_event: EventWriter<ProcessOutput>,
+    mut process_output_event: MessageWriter<ProcessOutput>,
 ) {
     for (entity, process) in query.iter() {
         if let Ok(mut buffer) = process.output_buffer.0.lock() {
@@ -66,7 +66,7 @@ pub(crate) fn handle_process_output(
 /// For the completed processes, a [`ProcessCompleted`] event is produced.
 pub(crate) fn handle_completed_process(
     mut query: Query<(Entity, &mut LocalCommand, &mut Process)>,
-    mut process_completed_event: EventWriter<ProcessCompleted>,
+    mut process_completed_event: MessageWriter<ProcessCompleted>,
 ) {
     for (entity, mut local_command, mut process) in query.iter_mut() {
         match local_command.state {
