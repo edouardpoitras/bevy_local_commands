@@ -40,8 +40,8 @@ fn setup(mut commands: Commands) {
 }
 
 fn update(
-    mut process_output_event: EventReader<ProcessOutput>,
-    mut process_completed_event: EventReader<ProcessCompleted>,
+    mut process_output_event: MessageReader<ProcessOutput>,
+    mut process_completed_event: MessageReader<ProcessCompleted>,
     command_query: Query<(), (With<Chain>, With<Retry>, With<Delay>, With<Cleanup>)>,
 ) {
     for process_output in process_output_event.read() {

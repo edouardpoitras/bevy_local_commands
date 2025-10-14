@@ -21,8 +21,8 @@ fn startup(mut commands: Commands) {
 }
 
 fn update(
-    mut process_output_event: EventReader<ProcessOutput>,
-    mut process_completed_event: EventReader<ProcessCompleted>,
+    mut process_output_event: MessageReader<ProcessOutput>,
+    mut process_completed_event: MessageReader<ProcessCompleted>,
 ) {
     for process_output in process_output_event.read() {
         for line in process_output.lines() {

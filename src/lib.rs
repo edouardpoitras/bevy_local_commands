@@ -20,7 +20,7 @@ pub use process::Process;
 /// The ID of a process.
 pub type Pid = u32;
 
-#[derive(Debug, Event)]
+#[derive(Debug, Message)]
 pub struct ProcessOutput {
     pub entity: Entity,
     /// The output generated in the last frame.
@@ -48,13 +48,13 @@ pub enum ProcessErrorInfo {
     FailedToStart,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Event)]
+#[derive(Debug, PartialEq, Eq, Clone, Message)]
 pub struct ProcessError {
     pub entity: Entity,
     pub info: ProcessErrorInfo,
 }
 
-#[derive(Debug, Event)]
+#[derive(Debug, Message)]
 pub struct ProcessCompleted {
     pub entity: Entity,
     pub exit_status: ExitStatus,
@@ -68,11 +68,11 @@ pub struct BevyLocalCommandsPlugin;
 
 impl Plugin for BevyLocalCommandsPlugin {
     fn build(&self, app: &mut App) {
-        app.add_event::<ProcessOutput>()
-            .add_event::<ProcessCompleted>()
-            .add_event::<ProcessError>()
-            .add_event::<RetryEvent>()
-            .add_event::<ChainCompletedEvent>()
+        app.add_message::<ProcessOutput>()
+            .add_message::<ProcessCompleted>()
+            .add_message::<ProcessError>()
+            .add_message::<RetryEvent>()
+            .add_message::<ChainCompletedEvent>()
             .add_systems(PreUpdate, addons::delay::apply_delay)
             .add_systems(
                 Update,
