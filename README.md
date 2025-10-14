@@ -40,7 +40,7 @@ fn kill_started_command(mut active_processes: Query<&mut Process>) {
 **Receive command output:**
 
 ```rust
-fn get_command_output(mut process_output_event: EventReader<ProcessOutput>) {
+fn get_command_output(mut process_output_event: MessageReader<ProcessOutput>) {
     for output in process_output_event.read() {
         info!("Command output for entity {:?}", output.entity);
 
@@ -55,7 +55,7 @@ fn get_command_output(mut process_output_event: EventReader<ProcessOutput>) {
 
 ```rust
 fn send_command_input(
-    mut process_output_event: EventReader<ProcessOutput>,
+    mut process_output_event: MessageReader<ProcessOutput>,
     mut active_processes: Query<&mut Process>,
 ) {
     for output in process_output_event.read() {
@@ -72,7 +72,7 @@ fn send_command_input(
 **See commands completed:**
 
 ```rust
-fn get_completed(mut process_completed_event: EventReader<ProcessCompleted>) {
+fn get_completed(mut process_completed_event: MessageReader<ProcessCompleted>) {
     for completed in process_completed_event.read() {
         info!(
             "Command completed (Entity - {}, Success - {})",
