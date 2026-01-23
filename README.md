@@ -138,10 +138,11 @@ fn chain_multiple_commands(mut commands: Commands) {
 
 - [ ] Mac testing (not sure if it works yet)
 
-## Bevy Compatilibity
+## Bevy Compatibility
 
 | bevy | bevy_local_commands |
 | ---- | ------------------- |
+| 0.18 | 0.11                |
 | 0.17 | 0.10                |
 | 0.16 | 0.9                 |
 | 0.15 | 0.8                 |
